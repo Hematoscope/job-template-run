@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "job-template-run.fullname" . }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ include "job-template-run.name" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "job-template-run.name" . }}
+    spec:
+      serviceAccountName: {{ include "job-template-run.serviceAccountName" . }}
+      containers:
+        - name: controller
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["kopf", "run", "--standalone", "--verbose", "/app/controller.py"]

@@ -1,0 +1,14 @@
+image:
+  repository: ghcr.io/job-template-run
+  tag: 0.1.0
+  pullPolicy: Always
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  name: ""
+
+rbac:
+  create: true

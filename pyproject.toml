@@ -1,0 +1,29 @@
+[project]
+name = "job-template-run"
+version = "0.1.0"
+description = "A Kubernetes controller for templated jobs and creating job runs"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = ["kopf>=1.37.5", "kubernetes>=32.0.1", "pyyaml>=6.0.2"]
+
+[dependency-groups]
+dev = [
+    "pyright>=1.1.399",
+    "ruff>=0.11.5",
+    "kubernetes-stubs-elephant-fork>=32.0.1",
+    "commitizen>=4.6.0",
+    "cz-changeup>=1.1.2",
+]
+
+[tool.commitizen]
+name = "cz_changeup"
+version_provider = "pep621"
+version_files = [
+    "charts/job-template-run/Chart.yaml",
+    "charts/job-template-run/values.yaml",
+]
+pre_bump_hooks = [
+    'sed -i "/name = \"job-template-run\"/{n;s/version = \".*\"/version = \"$CZ_PRE_NEW_VERSION\"/}" uv.lock',
+]
+
+changeup_repo_base_url = "https://github.com/hematoscope/job-template-run"

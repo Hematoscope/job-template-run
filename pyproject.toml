@@ -1,6 +1,6 @@
 [project]
 name = "job-template-run"
-version = "0.1.0"
+version = "0.1.1"
 description = "A Kubernetes controller for templated jobs and creating job runs"
 readme = "README.md"
 requires-python = ">=3.12"

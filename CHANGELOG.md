@@ -1,3 +1,13 @@
+## 0.1.15 (2025-04-15)
+
+### Fix
+
+- no commit arg for cz ([391fe0c](https://github.com/hematoscope/job-template-run/commit/391fe0c516723cb9cc4718f9b98da0f10e09fa3b))
+
+- uv run cz ([1e1c454](https://github.com/hematoscope/job-template-run/commit/1e1c45499c2319a1620204c9fc3ba12c55d0e357))
+
+- uv install commitizen for ci ([095e06a](https://github.com/hematoscope/job-template-run/commit/095e06abf41ad1379dcfdb2876544ab586795940))
+
 ## 0.1.14 (2025-04-15)
 
 ### Fix

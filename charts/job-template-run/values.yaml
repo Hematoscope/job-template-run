@@ -1,6 +1,6 @@
 image:
   repository: ghcr.io/hematoscope/job-template-run
-  tag: 0.1.14
+  tag: 0.1.15
   pullPolicy: Always
 
 nameOverride: ""

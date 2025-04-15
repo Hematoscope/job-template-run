@@ -39,8 +39,10 @@ jobs:
           extra_requirements: cz_changeup
           git_redirect_stderr: true
 
-      - name: Trim release notes
-        run: sed -i '/Running hook/d' body.md
+      - name: Trim and move release notes
+        run: |
+          sed -i '/Running hook/d' body.md
+          mv body.md charts/job-template-run/
 
       - name: Log in to the Container registry
         uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1

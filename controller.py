@@ -17,12 +17,12 @@ def get_template(namespace, name):
 def create_job(namespace, template, command):
     job_spec = template["spec"]["template"]
     job_spec = yaml.safe_load(yaml.dump(job_spec))  # Deep copy
-    job_spec["spec"]["template"]["spec"]["containers"][0]["command"] = command
+    job_spec["spec"]["containers"][0]["command"] = command
     job_manifest = {
         "apiVersion": "batch/v1",
         "kind": "Job",
         "metadata": {"generateName": "templated-job-"},
-        "spec": job_spec["spec"],
+        "spec": {"template": job_spec},
     }
     batch_v1 = kubernetes.client.BatchV1Api()
     batch_v1.create_namespaced_job(namespace=namespace, body=job_manifest)

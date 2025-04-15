@@ -17,6 +17,7 @@ spec:
               properties:
                 template:
                   type: object
+                  description: Direct JobTemplateSpec (spec.template of a Job)
   scope: Namespaced
   names:
     plural: jobtemplates

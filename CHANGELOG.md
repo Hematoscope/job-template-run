@@ -1,3 +1,9 @@
+## 0.1.11 (2025-04-15)
+
+### Fix
+
+- todo docs ([4fe7c8d](https://github.com/hematoscope/job-template-run/commit/4fe7c8d1f1e302c162f878f026fecf5b807f4556))
+
 ## 0.1.10 (2025-04-15)
 
 ### Fix

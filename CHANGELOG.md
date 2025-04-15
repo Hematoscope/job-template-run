@@ -1,3 +1,9 @@
+## 0.1.5 (2025-04-15)
+
+### Fix
+
+- remove debug from gha ([ae34917](https://github.com/hematoscope/job-template-run/commit/ae34917dd72ed0bec0e43ee79ae74bb3c0dab06f))
+
 ## 0.1.4 (2025-04-15)
 
 ### Fix

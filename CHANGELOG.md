@@ -1,3 +1,9 @@
+## 0.1.14 (2025-04-15)
+
+### Fix
+
+- revert helm release tag format ([7222740](https://github.com/hematoscope/job-template-run/commit/72227406e66c53447dd9040cda9150068e31fc13))
+
 ## 0.1.13 (2025-04-15)
 
 ### Fix

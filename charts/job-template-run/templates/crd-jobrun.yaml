@@ -21,6 +21,11 @@ spec:
                   type: array
                   items:
                     type: string
+                args:
+                  type: array
+                  items:
+                    type: string
+
   scope: Namespaced
   names:
     plural: jobruns

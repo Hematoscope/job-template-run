@@ -14,10 +14,16 @@ def get_template(namespace, name):
     )
 
 
-def create_job(namespace, template, command):
+def create_job(namespace, template, command=None, args=None):
     job_spec = template["spec"]["template"]
     job_spec = yaml.safe_load(yaml.dump(job_spec))  # Deep copy
-    job_spec["spec"]["containers"][0]["command"] = command
+
+    container = job_spec["spec"]["containers"][0]
+    if command:
+        container["command"] = command
+    if args:
+        container["args"] = args
+
     job_manifest = {
         "apiVersion": "batch/v1",
         "kind": "Job",
@@ -32,9 +38,10 @@ def create_job(namespace, template, command):
 def jobrun_create(spec, namespace, **_):
     template_name = spec.get("templateRef")
     command = spec.get("command")
+    args = spec.get("args")
 
-    if not command:
-        raise kopf.TemporaryError("Command must be specified", delay=10)
+    if not template_name:
+        raise kopf.PermanentError("templateRef must be specified")
 
     template = get_template(namespace, template_name)
-    create_job(namespace, template, command)
+    create_job(namespace, template, command, args)

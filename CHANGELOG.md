@@ -1,3 +1,9 @@
+## 0.4.2 (2025-04-15)
+
+### Fix
+
+- permissions for jobruns and events ([e59b398](https://github.com/hematoscope/job-template-run/commit/e59b398f7ed5edb5b9ad8d2d3754f11da3d231e9))
+
 ## 0.4.1 (2025-04-15)
 
 ### Fix

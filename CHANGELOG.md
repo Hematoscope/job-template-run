@@ -1,3 +1,9 @@
+## 0.1.8 (2025-04-15)
+
+### Fix
+
+- remove debug ([56c1677](https://github.com/hematoscope/job-template-run/commit/56c167739f002e5867740895bdcd90448a84d8a7))
+
 ## 0.1.7 (2025-04-15)
 
 ### Fix

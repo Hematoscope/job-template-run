@@ -10,6 +10,6 @@ wheels/
 .venv
 
 # CI temp files
-charts/job-template-run/body.md
+charts/job-template-run/RELEASE_NOTES.md
 .cr-release-packages/
 .cr-index/

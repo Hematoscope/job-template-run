@@ -40,14 +40,14 @@ jobs:
       - name: Create bump and changelog
         id: cz
         run: |
-          PREVIOUS_VERSION="$(cz version --project)"
+          PREVIOUS_VERSION="$(uv run cz version --project)"
           uv run cz --no-raise 7,21 bump --yes \
             --changelog \
             --files-only \
             --git-output-to-stderr \
             --commit \
             > charts/job-template-run/RELEASE_NOTES.md
-          NEW_VERSION="$(cz version --project)"
+          NEW_VERSION="$(uv run cz version --project)"
           sed -i '/Running hook/d' charts/job-template-run/RELEASE_NOTES.md
 
           git commit -am "bump: version ${PREVIOUS_VERSION} → ${NEW_VERSION}"

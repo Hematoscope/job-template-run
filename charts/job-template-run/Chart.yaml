@@ -2,4 +2,4 @@ apiVersion: v2
 name: job-template-run
 description: A Kubernetes controller for templated jobs and creating job runs
 type: application
-version: 0.1.11
+version: 0.1.12

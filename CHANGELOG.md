@@ -1,3 +1,9 @@
+## 0.1.12 (2025-04-15)
+
+### Fix
+
+- chart releaser release notes ([23eadfb](https://github.com/hematoscope/job-template-run/commit/23eadfb54c69471fc0b3aa138fa194b9df4739f2))
+
 ## 0.1.11 (2025-04-15)
 
 ### Fix

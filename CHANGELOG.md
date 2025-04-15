@@ -1,3 +1,13 @@
+## 0.2.0 (2025-04-15)
+
+### Feat
+
+- use non-root user for dockerfile ([14fa169](https://github.com/hematoscope/job-template-run/commit/14fa16991de605961b2a9de77c4abcc2f7d497a0))
+
+### Fix
+
+- don't overwrite release notes ([f62a051](https://github.com/hematoscope/job-template-run/commit/f62a05184a9448f4af0f1482fef7c012f8eeefd4))
+
 ## 0.1.16 (2025-04-15)
 
 ### Fix

@@ -1,3 +1,9 @@
+## 0.1.13 (2025-04-15)
+
+### Fix
+
+- release notes in env ([b3b2f59](https://github.com/hematoscope/job-template-run/commit/b3b2f593b429237f54ca846d83b234b7a5c5646c))
+
 ## 0.1.12 (2025-04-15)
 
 ### Fix

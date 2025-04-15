@@ -1,3 +1,9 @@
+## 0.1.7 (2025-04-15)
+
+### Fix
+
+- add cr temp folders to gitignore ([978bbc7](https://github.com/hematoscope/job-template-run/commit/978bbc7a60d8ab91c45df76d1bd2f501b67c27ff))
+
 ## 0.1.6 (2025-04-15)
 
 ### Fix

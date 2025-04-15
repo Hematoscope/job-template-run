@@ -1,3 +1,9 @@
+## 0.1.16 (2025-04-15)
+
+### Fix
+
+- changelog to stdout ([68c011c](https://github.com/hematoscope/job-template-run/commit/68c011c0475bbaa85071aab9c0f80cac903d9ce7))
+
 ## 0.1.15 (2025-04-15)
 
 ### Fix

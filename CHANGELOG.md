@@ -1,3 +1,11 @@
+## 0.3.0 (2025-04-15)
+
+### Feat
+
+- allow overriding either command or args for jobrun ([ecbc627](https://github.com/hematoscope/job-template-run/commit/ecbc6275878ab4b88b1096e2f89d7d49e60f1231))
+
+- flatten job template crd to accept a direct jobspec ([bb9507a](https://github.com/hematoscope/job-template-run/commit/bb9507a97917fd53aa683c0e8d2e0c0dceb2c6ba))
+
 ## 0.2.0 (2025-04-15)
 
 ### Feat

@@ -45,7 +45,6 @@ jobs:
             --changelog \
             --files-only \
             --git-output-to-stderr \
-            --commit \
             > charts/job-template-run/RELEASE_NOTES.md
           NEW_VERSION="$(uv run cz version --project)"
           sed -i '/Running hook/d' charts/job-template-run/RELEASE_NOTES.md

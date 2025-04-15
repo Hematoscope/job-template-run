@@ -1,3 +1,9 @@
+## 0.1.6 (2025-04-15)
+
+### Fix
+
+- add debug back ([e4110fe](https://github.com/hematoscope/job-template-run/commit/e4110feef5205d92606a57b36fc2d97560428112))
+
 ## 0.1.5 (2025-04-15)
 
 ### Fix

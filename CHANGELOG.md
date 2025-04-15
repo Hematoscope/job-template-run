@@ -1,3 +1,9 @@
+## 0.1.10 (2025-04-15)
+
+### Fix
+
+- update readme ([d709610](https://github.com/hematoscope/job-template-run/commit/d7096108ff010c9aa592b949a84d7f6204b4ca9a))
+
 ## 0.1.9 (2025-04-15)
 
 ### Fix

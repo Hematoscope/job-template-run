@@ -8,3 +8,6 @@ wheels/
 
 # Virtual environments
 .venv
+
+# CI temp files
+charts/job-template-run/body.md

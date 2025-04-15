@@ -1,3 +1,11 @@
+## 0.1.3 (2025-04-15)
+
+### Fix
+
+- gitignore ci release notes ([a7678fd](https://github.com/hematoscope/job-template-run/commit/a7678fd85148f6267243352e1982274b199b5824))
+
+- move release notes to chart folder in ci ([51cd620](https://github.com/hematoscope/job-template-run/commit/51cd620f69b47175f429dc09279b9d3560474a40))
+
 ## 0.1.2 (2025-04-15)
 
 ### Fix

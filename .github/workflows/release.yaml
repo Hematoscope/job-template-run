@@ -74,6 +74,9 @@ jobs:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}
           subject-digest: ${{ steps.push.outputs.digest }}
           push-to-registry: true
+
+      - name: debug
+        run: git status
     
       - name: Run chart-releaser
         uses: helm/chart-releaser-action@v1.7.0

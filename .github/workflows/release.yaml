@@ -39,9 +39,14 @@ jobs:
           extra_requirements: cz_changeup
           git_redirect_stderr: true
 
-      - name: Trim and move release notes
+      - name: Push changes
+        run: git push
+
+      - name: Trim and store release notes
+        id: notes
         run: |
           sed -i '/Running hook/d' body.md
+          echo "notes=$(cat body.md)" >> $GITHUB_OUTPUT
           mv body.md charts/job-template-run/
 
       - name: Log in to the Container registry
@@ -75,8 +80,16 @@ jobs:
           subject-digest: ${{ steps.push.outputs.digest }}
           push-to-registry: true
 
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Store release notes in chart
+        run: echo ${{ steps.notes.outputs.note }} > charts/job-template-run/RELEASE_NOTES.md
+
       - name: Run chart-releaser
         uses: helm/chart-releaser-action@v1.7.0
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-          CR_RELEASE_NOTES_FILE: body.md
+          CR_RELEASE_NOTES_FILE: RELEASE_NOTES.md

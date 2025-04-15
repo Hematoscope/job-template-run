@@ -1,3 +1,9 @@
+## 0.4.0 (2025-04-15)
+
+### Feat
+
+- allow whole job spec for templates ([d2257e9](https://github.com/hematoscope/job-template-run/commit/d2257e974c12bc9242b10819d615fe72bdded9cf))
+
 ## 0.3.0 (2025-04-15)
 
 ### Feat

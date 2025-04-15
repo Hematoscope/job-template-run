@@ -1,3 +1,11 @@
+## 0.4.1 (2025-04-15)
+
+### Fix
+
+- allow job-template-run service account to see crds ([8a460d4](https://github.com/hematoscope/job-template-run/commit/8a460d402c81bf6e8c69e203033aa57eb1416256))
+
+- rename job-template-run deployment to include controller ([23f801e](https://github.com/hematoscope/job-template-run/commit/23f801e1e9b8bb8af4f85c1a2425f5c762a00186))
+
 ## 0.4.0 (2025-04-15)
 
 ### Feat

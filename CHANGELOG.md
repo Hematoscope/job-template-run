@@ -1,3 +1,9 @@
+## 0.1.4 (2025-04-15)
+
+### Fix
+
+- line ending ([a086317](https://github.com/hematoscope/job-template-run/commit/a086317fe311b51f713632bf0e011ba092efa591))
+
 ## 0.1.3 (2025-04-15)
 
 ### Fix

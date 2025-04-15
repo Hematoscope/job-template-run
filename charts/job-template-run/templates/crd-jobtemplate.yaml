@@ -14,10 +14,8 @@ spec:
           properties:
             spec:
               type: object
-              properties:
-                template:
-                  type: object
-                  description: Direct JobTemplateSpec (spec.template of a Job)
+              description: Direct JobSpec
+              x-kubernetes-preserve-unknown-fields: true
   scope: Namespaced
   names:
     plural: jobtemplates

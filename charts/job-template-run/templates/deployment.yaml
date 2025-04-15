@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "job-template-run.fullname" . }}
+  name: {{ include "job-template-run.fullname" . }}-controller
 spec:
   replicas: 1
   selector:

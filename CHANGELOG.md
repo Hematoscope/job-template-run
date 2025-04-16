@@ -1,3 +1,9 @@
+## 0.10.0 (2025-04-16)
+
+### Feat
+
+- sync job statuses to jobruns ([7b32661](https://github.com/hematoscope/job-template-run/commit/7b32661ceb44fc8e3277fce5e6c038a5355c6826))
+
 ## 0.9.1 (2025-04-16)
 
 ### Fix

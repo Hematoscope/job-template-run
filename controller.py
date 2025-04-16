@@ -3,6 +3,8 @@ import kopf
 import kubernetes
 import yaml
 
+from collections import defaultdict
+
 
 def get_template(namespace, name):
     crd_api = kubernetes.client.CustomObjectsApi()
@@ -34,7 +36,9 @@ def create_job(name, namespace, template, command=None, args=None):
         "hematoscope.app/job-run": name,
     }
 
-    job_spec["template"]["metadata"]["labels"] |= labels
+    job_spec["template"].setdefault("metadata", {}).setdefault("labels", {}).update(
+        labels
+    )
 
     job_manifest = {
         "apiVersion": "batch/v1",

@@ -49,7 +49,7 @@ jobs:
             > charts/job-template-run/RELEASE_NOTES.md
           NEW_VERSION="$(uv run cz version --project)"
 
-          if ["$PREVIOUS_VERSION" != "$NEW_VERSION"]; then
+          if [[ "$PREVIOUS_VERSION" != "$NEW_VERSION" ]]; then
             sed -i '/Running hook/d' charts/job-template-run/RELEASE_NOTES.md
             git commit -am "bump: version ${PREVIOUS_VERSION} → ${NEW_VERSION}"
             git push

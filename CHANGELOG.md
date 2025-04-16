@@ -1,3 +1,9 @@
+## 0.9.1 (2025-04-16)
+
+### Fix
+
+- job pod metadata keyerror ([1621010](https://github.com/hematoscope/job-template-run/commit/1621010bb96c0b0789768d9b33393e6377cb5ab1))
+
 ## 0.9.0 (2025-04-16)
 
 ### Feat

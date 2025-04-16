@@ -36,3 +36,7 @@ spec:
               value: {{ .Chart.AppVersion }}
             - name: APP_MANAGED_BY
               value: {{ .Release.Service }}
+            - name: CLEANUP_INTERVAL_MINUTES
+              value: {{ .Values.controller.cleanup_interval_minutes | quote }}
+            - name: CLEANUP_EXPIRY_MINUTES
+              value: {{ .Values.controller.cleanup_expiry_minutes | quote }}

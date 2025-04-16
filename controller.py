@@ -2,6 +2,8 @@ import os
 import kopf
 import kubernetes
 import yaml
+from datetime import datetime, timedelta, timezone
+from kubernetes.client.rest import ApiException
 
 
 def get_template(namespace, name):
@@ -54,3 +56,49 @@ def jobrun_create(spec, namespace, **_):
 
     template = get_template(namespace, template_name)
     create_job(namespace, template, command, args)
+
+
+@kopf.on.success("batch", "v1", "jobs")
+def job_success(meta, namespace, **_):
+    job_name = meta["name"]
+    labels = meta.get("labels", {})
+    managed_by_label = os.getenv("APP_MANAGED_BY")
+
+    if labels.get("app.kubernetes.io/managed-by") == managed_by_label:
+        batch_v1 = kubernetes.client.BatchV1Api()
+        batch_v1.delete_namespaced_job(
+            name=job_name,
+            namespace=namespace,
+            body=kubernetes.client.V1DeleteOptions(propagation_policy="Foreground"),
+        )
+
+
+@kopf.timer(
+    "hematoscope.app", "v1", interval=os.getenv("CLEANUP_INTERVAL_MINUTES") * 60
+)
+def cleanup_old_jobs(namespace, **_):
+    managed_by_label = os.getenv("APP_MANAGED_BY")
+    if not managed_by_label:
+        return
+
+    batch_v1 = kubernetes.client.BatchV1Api()
+    try:
+        jobs = batch_v1.list_namespaced_job(namespace=namespace)
+        for job in jobs.items:
+            labels = job.metadata.labels or {}
+            if labels.get("app.kubernetes.io/managed-by") != managed_by_label:
+                continue
+
+            creation_timestamp = job.metadata.creation_timestamp
+            if creation_timestamp and (
+                datetime.now(timezone.utc) - creation_timestamp.replace(tzinfo=None)
+            ) > timedelta(minutes=int(os.getenv("CLEANUP_EXIPRY_MINUTES"))):
+                batch_v1.delete_namespaced_job(
+                    name=job.metadata.name,
+                    namespace=namespace,
+                    body=kubernetes.client.V1DeleteOptions(
+                        propagation_policy="Foreground"
+                    ),
+                )
+    except ApiException as e:
+        kopf.logger.error(f"Failed to clean up old jobs: {e}")

@@ -50,13 +50,19 @@ jobs:
           NEW_VERSION="$(uv run cz version --project)"
           sed -i '/Running hook/d' charts/job-template-run/RELEASE_NOTES.md
 
-          git commit -am "bump: version ${PREVIOUS_VERSION} → ${NEW_VERSION}"
+          git diff-index --quiet HEAD || git commit -am "bump: version ${PREVIOUS_VERSION} → ${NEW_VERSION}"
           git push
 
           echo "version=${NEW_VERSION}" >> "$GITHUB_OUTPUT"
+          if ["$PREVIOUS_VERSION" != "$NEW_VERSION"]; then
+            echo "version-changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "version-changed=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Log in to the Container registry
         uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+        if: steps.cz.outputs.version-changed == 'true'
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -65,6 +71,7 @@ jobs:
       - name: Extract metadata (tags, labels) for Docker
         id: meta
         uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
+        if: steps.cz.outputs.version-changed == 'true'
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
@@ -73,6 +80,7 @@ jobs:
       - name: Build and push Docker image
         id: push
         uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
+        if: steps.cz.outputs.version-changed == 'true'
         with:
           context: .
           push: true
@@ -81,6 +89,7 @@ jobs:
       
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v2
+        if: steps.cz.outputs.version-changed == 'true'
         with:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}
           subject-digest: ${{ steps.push.outputs.digest }}
@@ -88,6 +97,7 @@ jobs:
 
       - name: Run chart-releaser
         uses: helm/chart-releaser-action@v1.7.0
+        if: steps.cz.outputs.version-changed == 'true'
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
           CR_RELEASE_NOTES_FILE: RELEASE_NOTES.md

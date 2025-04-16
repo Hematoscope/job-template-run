@@ -1,3 +1,9 @@
+## 0.12.0 (2025-04-16)
+
+### Feat
+
+- add LICENSE ([f438858](https://github.com/hematoscope/job-template-run/commit/f43885836740d54510914b0ca445554cf735edd2))
+
 ## 0.11.1 (2025-04-16)
 
 ### Fix

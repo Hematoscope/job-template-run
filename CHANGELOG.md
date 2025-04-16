@@ -1,3 +1,9 @@
+## 0.11.1 (2025-04-16)
+
+### Fix
+
+- additionalprintercolumns indentation ([49c506f](https://github.com/hematoscope/job-template-run/commit/49c506f374b3d61d0b4f7e45260c2582f9712d78))
+
 ## 0.11.0 (2025-04-16)
 
 ### Feat

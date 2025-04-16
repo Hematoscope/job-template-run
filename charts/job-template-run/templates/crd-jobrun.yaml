@@ -2,11 +2,6 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   name: jobruns.hematoscope.app
-  labels:
-    app.kubernetes.io/name: {{ include "job-template-run.name" . }}
-    app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/version: {{ .Chart.Version }}
-    app.kubernetes.io/managed-by: {{ .Release.Service }}
 spec:
   group: hematoscope.app
   versions:
@@ -30,38 +25,6 @@ spec:
                   type: array
                   items:
                     type: string
-            status:
-              type: object
-              properties:
-                startTime:
-                  type: string
-                  format: date-time
-                  description: The time when the job started.
-                completionTime:
-                  type: string
-                  format: date-time
-                  description: The time when the job completed.
-                conditions:
-                  type: array
-                  items:
-                    type: object
-                    properties:
-                      type:
-                        type: string
-                        description: The type of condition (e.g., "Complete", "Failed").
-                      status:
-                        type: string
-                        description: The status of the condition (e.g., "True", "False").
-                      lastTransitionTime:
-                        type: string
-                        format: date-time
-                        description: The last time the condition transitioned.
-                      reason:
-                        type: string
-                        description: A brief reason for the condition's last transition.
-                      message:
-                        type: string
-                        description: A human-readable message indicating details about the transition.
 
   scope: Namespaced
   names:
@@ -70,3 +33,20 @@ spec:
     kind: JobRun
     shortNames:
       - jr
+  additionalPrinterColumns:
+    - name: Template
+      type: string
+      jsonPath: .spec.templateRef
+      description: The referenced JobTemplate
+    - name: Start Time
+      type: date
+      jsonPath: .status.startTime
+      description: The time when the job started
+    - name: Completion Time
+      type: date
+      jsonPath: .status.completionTime
+      description: The time when the job completed
+    - name: Status
+      type: string
+      jsonPath: .status.conditions[-1].type
+      description: The current status of the job

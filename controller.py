@@ -25,19 +25,23 @@ def create_job(name, namespace, template, command=None, args=None):
     if args:
         container["args"] = args
 
+    labels = {
+        "app.kubernetes.io/name": os.getenv("APP_NAME"),
+        "app.kubernetes.io/instance": os.getenv("APP_INSTANCE"),
+        "app.kubernetes.io/version": os.getenv("APP_VERSION"),
+        "app.kubernetes.io/managed-by": os.getenv("APP_MANAGED_BY"),
+        "hematoscope.app/job-template": template["metadata"]["name"],
+        "hematoscope.app/job-run": name,
+    }
+
+    job_spec["template"]["metadata"]["labels"] |= labels
+
     job_manifest = {
         "apiVersion": "batch/v1",
         "kind": "Job",
         "metadata": {
             "generateName": f"{template['metadata']['name']}-{name}-",
-            "labels": {
-                "app.kubernetes.io/name": os.getenv("APP_NAME"),
-                "app.kubernetes.io/instance": os.getenv("APP_INSTANCE"),
-                "app.kubernetes.io/version": os.getenv("APP_VERSION"),
-                "app.kubernetes.io/managed-by": os.getenv("APP_MANAGED_BY"),
-                "hematoscope.app/job-template": template["metadata"]["name"],
-                "hematoscope.app/job-run": name,
-            },
+            "labels": labels,
         },
         "spec": job_spec,
     }

@@ -5,7 +5,7 @@ metadata:
   labels:
     app.kubernetes.io/name: {{ include "job-template-run.name" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/version: {{ .Chart.Version }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
 spec:
   replicas: 1
@@ -18,7 +18,7 @@ spec:
         app: {{ include "job-template-run.name" . }}
         app.kubernetes.io/name: {{ include "job-template-run.name" . }}
         app.kubernetes.io/instance: {{ .Release.Name }}
-        app.kubernetes.io/version: {{ .Chart.AppVersion }}
+        app.kubernetes.io/version: {{ .Chart.Version }}
         app.kubernetes.io/managed-by: {{ .Release.Service }}
     spec:
       serviceAccountName: {{ include "job-template-run.serviceAccountName" . }}
@@ -33,6 +33,6 @@ spec:
             - name: APP_INSTANCE
               value: {{ .Release.Name }}
             - name: APP_VERSION
-              value: {{ .Chart.AppVersion }}
+              value: {{ .Chart.Version }}
             - name: APP_MANAGED_BY
               value: {{ .Release.Service }}

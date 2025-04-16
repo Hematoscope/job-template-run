@@ -1,3 +1,4 @@
+import os
 import kopf
 import kubernetes
 import yaml
@@ -14,27 +15,81 @@ def get_template(namespace, name):
     )
 
 
-def create_job(namespace, template, command):
-    job_spec = template["spec"]["template"]
-    job_spec = yaml.safe_load(yaml.dump(job_spec))  # Deep copy
-    job_spec["spec"]["template"]["spec"]["containers"][0]["command"] = command
+def create_job(name, namespace, template, command=None, args=None):
+    template = yaml.safe_load(yaml.dump(template))
+    job_spec = template["spec"]
+
+    container = job_spec["template"]["spec"]["containers"][0]
+    if command:
+        container["command"] = command
+    if args:
+        container["args"] = args
+
+    labels = {
+        "app.kubernetes.io/name": os.getenv("APP_NAME"),
+        "app.kubernetes.io/instance": os.getenv("APP_INSTANCE"),
+        "app.kubernetes.io/version": os.getenv("APP_VERSION"),
+        "app.kubernetes.io/managed-by": os.getenv("APP_MANAGED_BY"),
+        "hematoscope.app/job-template": template["metadata"]["name"],
+        "hematoscope.app/job-run": name,
+    }
+
+    job_spec["template"].setdefault("metadata", {}).setdefault("labels", {}).update(
+        labels
+    )
+
     job_manifest = {
         "apiVersion": "batch/v1",
         "kind": "Job",
-        "metadata": {"generateName": "templated-job-"},
-        "spec": job_spec["spec"],
+        "metadata": {
+            "generateName": f"{template['metadata']['name']}-{name}-",
+            "labels": labels,
+        },
+        "spec": job_spec,
     }
     batch_v1 = kubernetes.client.BatchV1Api()
     batch_v1.create_namespaced_job(namespace=namespace, body=job_manifest)
 
 
 @kopf.on.create("hematoscope.app", "v1", "jobruns")
-def jobrun_create(spec, namespace, **_):
+def jobrun_create(spec, name, namespace, **_):
     template_name = spec.get("templateRef")
     command = spec.get("command")
+    args = spec.get("args")
 
-    if not command:
-        raise kopf.TemporaryError("Command must be specified", delay=10)
+    if not template_name:
+        raise kopf.PermanentError("templateRef must be specified")
 
     template = get_template(namespace, template_name)
-    create_job(namespace, template, command)
+    create_job(name, namespace, template, command, args)
+
+
+@kopf.on.event("batch", "v1", "jobs")
+def job_status_update(event, namespace, **_):
+    job = event.get("object")
+    if not job:
+        return
+
+    jobrun_name = (
+        job.get("metadata", {}).get("labels", {}).get("hematoscope.app/job-run")
+    )
+    if not jobrun_name:
+        return
+
+    # Update the JobRun status
+    job_status = job.get("status", {})
+    crd_api = kubernetes.client.CustomObjectsApi()
+    crd_api.patch_namespaced_custom_object(
+        group="hematoscope.app",
+        version="v1",
+        namespace=namespace,
+        plural="jobruns",
+        name=jobrun_name,
+        body={
+            "status": {
+                "startTime": job_status.get("startTime"),
+                "completionTime": job_status.get("completionTime"),
+                "conditions": job_status.get("conditions", []),
+            },
+        },
+    )

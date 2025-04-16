@@ -1,6 +1,6 @@
 [project]
 name = "job-template-run"
-version = "0.1.8"
+version = "0.12.0"
 description = "A Kubernetes controller for templated jobs and creating job runs"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -25,5 +25,6 @@ version_files = [
 pre_bump_hooks = [
     'sed -i "/name = \"job-template-run\"/{n;s/version = \".*\"/version = \"$CZ_PRE_NEW_VERSION\"/}" uv.lock',
 ]
+ignored_tag_formats = ["job-template-run-*"]
 
 changeup_repo_base_url = "https://github.com/hematoscope/job-template-run"

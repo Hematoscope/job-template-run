@@ -1,3 +1,13 @@
+## 0.8.0 (2025-04-16)
+
+### Feat
+
+- add job labels for template and run ([f94f644](https://github.com/hematoscope/job-template-run/commit/f94f644f094613c9d4301aee98654cae4b867ef2))
+
+### Fix
+
+- use chart version for label instead of appversion ([929ceb8](https://github.com/hematoscope/job-template-run/commit/929ceb857442ddb7aa3938dc61e90d1f891f226c))
+
 ## 0.7.0 (2025-04-16)
 
 ### Feat

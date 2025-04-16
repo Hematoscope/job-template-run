@@ -3,8 +3,6 @@ import kopf
 import kubernetes
 import yaml
 
-from collections import defaultdict
-
 
 def get_template(namespace, name):
     crd_api = kubernetes.client.CustomObjectsApi()
@@ -64,3 +62,34 @@ def jobrun_create(spec, name, namespace, **_):
 
     template = get_template(namespace, template_name)
     create_job(name, namespace, template, command, args)
+
+
+@kopf.on.event("batch", "v1", "jobs")
+def job_status_update(event, namespace, **_):
+    job = event.get("object")
+    if not job:
+        return
+
+    jobrun_name = (
+        job.get("metadata", {}).get("labels", {}).get("hematoscope.app/job-run")
+    )
+    if not jobrun_name:
+        return
+
+    # Update the JobRun status
+    job_status = job.get("status", {})
+    crd_api = kubernetes.client.CustomObjectsApi()
+    crd_api.patch_namespaced_custom_object(
+        group="hematoscope.app",
+        version="v1",
+        namespace=namespace,
+        plural="jobruns",
+        name=jobrun_name,
+        body={
+            "status": {
+                "startTime": job_status.get("startTime"),
+                "completionTime": job_status.get("completionTime"),
+                "conditions": job_status.get("conditions", []),
+            },
+        },
+    )

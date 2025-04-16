@@ -30,6 +30,38 @@ spec:
                   type: array
                   items:
                     type: string
+            status:
+              type: object
+              properties:
+                startTime:
+                  type: string
+                  format: date-time
+                  description: The time when the job started.
+                completionTime:
+                  type: string
+                  format: date-time
+                  description: The time when the job completed.
+                conditions:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                        description: The type of condition (e.g., "Complete", "Failed").
+                      status:
+                        type: string
+                        description: The status of the condition (e.g., "True", "False").
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                        description: The last time the condition transitioned.
+                      reason:
+                        type: string
+                        description: A brief reason for the condition's last transition.
+                      message:
+                        type: string
+                        description: A human-readable message indicating details about the transition.
 
   scope: Namespaced
   names:

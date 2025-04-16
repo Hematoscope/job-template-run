@@ -2,6 +2,11 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "job-template-run.fullname" . }}-controller
+  labels:
+    app.kubernetes.io/name: {{ include "job-template-run.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
 spec:
   replicas: 1
   selector:
@@ -11,6 +16,10 @@ spec:
     metadata:
       labels:
         app: {{ include "job-template-run.name" . }}
+        app.kubernetes.io/name: {{ include "job-template-run.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/version: {{ .Chart.AppVersion }}
+        app.kubernetes.io/managed-by: {{ .Release.Service }}
     spec:
       serviceAccountName: {{ include "job-template-run.serviceAccountName" . }}
       containers:
@@ -18,3 +27,12 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command: ["kopf", "run", "--standalone", "--verbose", "/app/controller.py"]
+          env:
+            - name: APP_NAME
+              value: {{ include "job-template-run.name" . }}
+            - name: APP_INSTANCE
+              value: {{ .Release.Name }}
+            - name: APP_VERSION
+              value: {{ .Chart.AppVersion }}
+            - name: APP_MANAGED_BY
+              value: {{ .Release.Service }}

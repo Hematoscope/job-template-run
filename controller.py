@@ -1,3 +1,4 @@
+import os
 import kopf
 import kubernetes
 import yaml
@@ -27,7 +28,15 @@ def create_job(namespace, template, command=None, args=None):
     job_manifest = {
         "apiVersion": "batch/v1",
         "kind": "Job",
-        "metadata": {"generateName": "templated-job-"},
+        "metadata": {
+            "generateName": "templated-job-",
+            "labels": {
+                "app.kubernetes.io/name": os.getenv("APP_NAME"),
+                "app.kubernetes.io/instance": os.getenv("APP_INSTANCE"),
+                "app.kubernetes.io/version": os.getenv("APP_VERSION"),
+                "app.kubernetes.io/managed-by": os.getenv("APP_MANAGED_BY"),
+            },
+        },
         "spec": job_spec,
     }
     batch_v1 = kubernetes.client.BatchV1Api()

@@ -1,3 +1,9 @@
+## 0.11.0 (2025-04-16)
+
+### Feat
+
+- add additional printer columns to jobrun crd ([52523a7](https://github.com/hematoscope/job-template-run/commit/52523a72ad7c426c9b2b8ce3537f91f8c233f285))
+
 ## 0.10.0 (2025-04-16)
 
 ### Feat

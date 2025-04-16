@@ -1,3 +1,9 @@
+## 0.9.0 (2025-04-16)
+
+### Feat
+
+- apply common job labels also to job pods ([465f4c7](https://github.com/hematoscope/job-template-run/commit/465f4c75fd47e0f54c90d9b2e35f9b7b9e9c34cc))
+
 ## 0.8.0 (2025-04-16)
 
 ### Feat

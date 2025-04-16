@@ -1,3 +1,9 @@
+## 0.7.0 (2025-04-16)
+
+### Feat
+
+- generate job name from template and run ([10b4ab2](https://github.com/hematoscope/job-template-run/commit/10b4ab2a09ef77a106cbbc127a77e355380abe02))
+
 ## 0.6.0 (2025-04-16)
 
 ### Feat

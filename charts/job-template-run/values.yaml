@@ -12,7 +12,3 @@ serviceAccount:
 
 rbac:
   create: true
-
-controller:
-  cleanup_interval_minutes: 60
-  cleanup_expiry_minutes: 1440

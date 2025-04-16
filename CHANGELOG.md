@@ -1,3 +1,11 @@
+## 0.6.0 (2025-04-16)
+
+### Feat
+
+- remove jobrun job lifecycle management ([0d7b48d](https://github.com/hematoscope/job-template-run/commit/0d7b48dbb78166878c92cb1efdb0ab340f3acee6))
+
+  this feature was stupid as ttlSecondsAfterFinished exists
+
 ## 0.5.0 (2025-04-16)
 
 ### Feat

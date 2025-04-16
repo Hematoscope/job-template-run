@@ -15,9 +15,9 @@ def get_template(namespace, name):
     )
 
 
-def create_job(namespace, template, command=None, args=None):
+def create_job(name, namespace, template, command=None, args=None):
+    template = yaml.safe_load(yaml.dump(template))
     job_spec = template["spec"]
-    job_spec = yaml.safe_load(yaml.dump(job_spec))  # Deep copy
 
     container = job_spec["template"]["spec"]["containers"][0]
     if command:
@@ -29,7 +29,7 @@ def create_job(namespace, template, command=None, args=None):
         "apiVersion": "batch/v1",
         "kind": "Job",
         "metadata": {
-            "generateName": "templated-job-",
+            "generateName": f"{template['metadata']['name']}-{name}-",
             "labels": {
                 "app.kubernetes.io/name": os.getenv("APP_NAME"),
                 "app.kubernetes.io/instance": os.getenv("APP_INSTANCE"),
@@ -44,7 +44,7 @@ def create_job(namespace, template, command=None, args=None):
 
 
 @kopf.on.create("hematoscope.app", "v1", "jobruns")
-def jobrun_create(spec, namespace, **_):
+def jobrun_create(spec, name, namespace, **_):
     template_name = spec.get("templateRef")
     command = spec.get("command")
     args = spec.get("args")
@@ -53,4 +53,4 @@ def jobrun_create(spec, namespace, **_):
         raise kopf.PermanentError("templateRef must be specified")
 
     template = get_template(namespace, template_name)
-    create_job(namespace, template, command, args)
+    create_job(name, namespace, template, command, args)

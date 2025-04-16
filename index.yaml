@@ -2,6 +2,15 @@ apiVersion: v1
 entries:
   job-template-run:
   - apiVersion: v2
+    created: "2025-04-16T10:48:46.388522011Z"
+    description: A Kubernetes controller for templated jobs and creating job runs
+    digest: 6a5ba97329bc027a90b2cdb2b194272efee92f9be6872f10785ce5108c3e73db
+    name: job-template-run
+    type: application
+    urls:
+    - https://github.com/Hematoscope/job-template-run/releases/download/0.10.0/job-template-run-0.10.0.tgz
+    version: 0.10.0
+  - apiVersion: v2
     created: "2025-04-16T09:35:53.710552038Z"
     description: A Kubernetes controller for templated jobs and creating job runs
     digest: f55a6a108d4470b253728dfdb991cdb32e42366d5cf9a7d6a0cd7e9d588e2e1c
@@ -127,4 +136,4 @@ entries:
     urls:
     - https://github.com/Hematoscope/job-template-run/releases/download/job-template-run-0.1.10/job-template-run-0.1.10.tgz
     version: 0.1.10
-generated: "2025-04-16T09:35:53.710688782Z"
+generated: "2025-04-16T10:48:46.388642736Z"

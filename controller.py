@@ -35,6 +35,8 @@ def create_job(name, namespace, template, command=None, args=None):
                 "app.kubernetes.io/instance": os.getenv("APP_INSTANCE"),
                 "app.kubernetes.io/version": os.getenv("APP_VERSION"),
                 "app.kubernetes.io/managed-by": os.getenv("APP_MANAGED_BY"),
+                "hematoscope.app/job-template": template["metadata"]["name"],
+                "hematoscope.app/job-run": name,
             },
         },
         "spec": job_spec,

@@ -25,7 +25,23 @@ spec:
                   type: array
                   items:
                     type: string
-
+      additionalPrinterColumns:
+        - name: Template
+          type: string
+          jsonPath: .spec.templateRef
+          description: The referenced JobTemplate
+        - name: Start Time
+          type: date
+          jsonPath: .status.startTime
+          description: The time when the job started
+        - name: Completion Time
+          type: date
+          jsonPath: .status.completionTime
+          description: The time when the job completed
+        - name: Status
+          type: string
+          jsonPath: .status.conditions[-1].type
+          description: The current status of the job
   scope: Namespaced
   names:
     plural: jobruns
@@ -33,20 +49,4 @@ spec:
     kind: JobRun
     shortNames:
       - jr
-  additionalPrinterColumns:
-    - name: Template
-      type: string
-      jsonPath: .spec.templateRef
-      description: The referenced JobTemplate
-    - name: Start Time
-      type: date
-      jsonPath: .status.startTime
-      description: The time when the job started
-    - name: Completion Time
-      type: date
-      jsonPath: .status.completionTime
-      description: The time when the job completed
-    - name: Status
-      type: string
-      jsonPath: .status.conditions[-1].type
-      description: The current status of the job
+  

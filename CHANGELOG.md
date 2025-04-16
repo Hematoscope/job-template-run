@@ -1,3 +1,11 @@
+## 0.5.0 (2025-04-16)
+
+### Feat
+
+- add jobrun created job lifecycle management ([0eec811](https://github.com/hematoscope/job-template-run/commit/0eec811fd93c22eab0741929fc1ad2673033cc3b))
+
+- add labels to kubernetes resources ([09f00fe](https://github.com/hematoscope/job-template-run/commit/09f00fe9f91ed4008c5532e433e041ba1f74ca50))
+
 ## 0.4.2 (2025-04-15)
 
 ### Fix

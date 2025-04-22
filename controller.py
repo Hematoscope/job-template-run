@@ -51,6 +51,11 @@ def create_job(name, namespace, template, command=None, args=None):
     batch_v1.create_namespaced_job(namespace=namespace, body=job_manifest)
 
 
+@kopf.on.startup()
+def configure(settings, **_):
+    settings.watching.server_timeout = 3 * 60
+
+
 @kopf.on.create("hematoscope.app", "v1", "jobruns")
 def jobrun_create(spec, name, namespace, **_):
     template_name = spec.get("templateRef")

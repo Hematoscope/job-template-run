@@ -1,3 +1,9 @@
+## 0.12.1 (2025-04-22)
+
+### Fix
+
+- set a server timeout ([86f2dcf](https://github.com/hematoscope/job-template-run/commit/86f2dcf893e0bdf00c86c4f504a07fe6fce394b5))
+
 ## 0.12.0 (2025-04-16)
 
 ### Feat

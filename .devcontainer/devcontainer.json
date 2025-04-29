@@ -5,11 +5,16 @@
   "build": { "dockerfile": "Dockerfile", "context": ".." },
 
   "features": {
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
+			"enableNonRootDocker": true
+		},
     "ghcr.io/devcontainers/features/kubectl-helm-minikube:1": {
       "minikube": "none"
     },
     "ghcr.io/mpriscella/features/helm-chart-testing:1": {},
+    "ghcr.io/devcontainers-contrib/features/kind:1": {},
     "ghcr.io/devcontainers-extra/features/yamllint:2": {},
+    "ghcr.io/audacioustux/devcontainers/k9s:1": {},
 
     "ghcr.io/va-h/devcontainers-features/uv:1": {},
 

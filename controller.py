@@ -53,7 +53,9 @@ def create_job(name, namespace, template, command=None, args=None):
 
 @kopf.on.startup()
 def configure(settings, **_):
-    settings.watching.server_timeout = 3 * 60
+    settings.networking.request_timeout = 60
+    settings.watching.server_timeout = 60
+    settings.watching.client_timeout = 60
 
 
 @kopf.on.create("hematoscope.app", "v1", "jobruns")

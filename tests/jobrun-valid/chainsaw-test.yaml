@@ -1,0 +1,39 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: jobrun-valid
+spec:
+  steps:
+    - try:
+        - apply:
+            resource:
+              apiVersion: hematoscope.app/v1
+              kind: JobTemplate
+              metadata:
+                name: example-template
+                namespace: job-template-run
+              spec:
+                template:
+                  spec:
+                    containers:
+                      - name: busybox
+                        image: busybox
+                        command: ["echo", "hello"]
+                    restartPolicy: Never
+        - apply:
+            resource:
+              apiVersion: hematoscope.app/v1
+              kind: JobRun
+              metadata:
+                name: example-jobrun
+                namespace: job-template-run
+              spec:
+                templateRef: example-template
+        - assert:
+            resource:
+              apiVersion: batch/v1
+              kind: Job
+              metadata:
+                namespace: job-template-run
+                labels:
+                  hematoscope.app/job-run: example-jobrun

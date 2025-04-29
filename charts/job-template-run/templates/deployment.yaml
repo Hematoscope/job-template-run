@@ -26,7 +26,13 @@ spec:
         - name: controller
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          command: ["kopf", "run", "--standalone", "--verbose", "/app/controller.py"]
+          command:
+            - "kopf"
+            - "run"
+            - "--liveness=http://0.0.0.0:8080/healthz"
+            - "--standalone"
+            - "--verbose"
+            - "/app/controller.py"
           env:
             - name: APP_NAME
               value: {{ include "job-template-run.name" . }}
@@ -36,3 +42,7 @@ spec:
               value: {{ .Chart.Version }}
             - name: APP_MANAGED_BY
               value: {{ .Release.Service }}
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080

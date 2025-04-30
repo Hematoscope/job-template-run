@@ -13,7 +13,6 @@ spec:
               kind: JobRun
               metadata:
                 name: missing-templateref
-                namespace: job-template-run
               spec: {}
             expect:
               - check:

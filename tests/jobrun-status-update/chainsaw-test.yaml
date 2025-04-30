@@ -13,7 +13,6 @@ spec:
               kind: JobTemplate
               metadata:
                 name: status-template
-                namespace: job-template-run
               spec:
                 template:
                   spec:
@@ -28,7 +27,6 @@ spec:
               kind: JobRun
               metadata:
                 name: status-jobrun
-                namespace: job-template-run
               spec:
                 templateRef: status-template
     - try:
@@ -36,7 +34,6 @@ spec:
             apiVersion: hematoscope.app/v1
             kind: JobRun
             name: status-jobrun
-            namespace: job-template-run
             timeout: 10s
             for:
               jsonPath:
@@ -48,7 +45,6 @@ spec:
               kind: JobRun
               metadata:
                 name: status-jobrun
-                namespace: job-template-run
               status:
                 (startTime != null): true
                 (completionTime != null): true

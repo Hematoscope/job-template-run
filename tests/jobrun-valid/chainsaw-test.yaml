@@ -11,7 +11,6 @@ spec:
               kind: JobTemplate
               metadata:
                 name: example-template
-                namespace: job-template-run
               spec:
                 template:
                   spec:
@@ -26,7 +25,6 @@ spec:
               kind: JobRun
               metadata:
                 name: example-jobrun
-                namespace: job-template-run
               spec:
                 templateRef: example-template
         - assert:
@@ -34,7 +32,6 @@ spec:
               apiVersion: batch/v1
               kind: Job
               metadata:
-                namespace: job-template-run
                 labels:
                   hematoscope.app/job-template: example-template
                   hematoscope.app/job-run: example-jobrun

@@ -14,6 +14,8 @@ spec:
           properties:
             spec:
               type: object
+              required:
+                - templateRef
               properties:
                 templateRef:
                   type: string
@@ -25,17 +27,20 @@ spec:
                   type: array
                   items:
                     type: string
+            status:
+              type: object
+              x-kubernetes-preserve-unknown-fields: true
       additionalPrinterColumns:
         - name: Template
           type: string
           jsonPath: .spec.templateRef
           description: The referenced JobTemplate
         - name: Start Time
-          type: date
+          type: string
           jsonPath: .status.startTime
           description: The time when the job started
         - name: Completion Time
-          type: date
+          type: string
           jsonPath: .status.completionTime
           description: The time when the job completed
         - name: Status
@@ -49,4 +54,3 @@ spec:
     kind: JobRun
     shortNames:
       - jr
-  

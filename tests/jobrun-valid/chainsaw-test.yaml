@@ -36,4 +36,5 @@ spec:
               metadata:
                 namespace: job-template-run
                 labels:
+                  hematoscope.app/job-template: example-template
                   hematoscope.app/job-run: example-jobrun

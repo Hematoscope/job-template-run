@@ -1,0 +1,55 @@
+# Test: JobRun status is updated from the Job it creates
+---
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: jobrun-status-update
+spec:
+  steps:
+    - try:
+        - apply:
+            resource:
+              apiVersion: hematoscope.app/v1
+              kind: JobTemplate
+              metadata:
+                name: status-template
+                namespace: job-template-run
+              spec:
+                template:
+                  spec:
+                    containers:
+                      - name: busybox
+                        image: busybox
+                        command: ["sh", "-c", "echo done"]
+                    restartPolicy: Never
+        - apply:
+            resource:
+              apiVersion: hematoscope.app/v1
+              kind: JobRun
+              metadata:
+                name: status-jobrun
+                namespace: job-template-run
+              spec:
+                templateRef: status-template
+    - try:
+        - wait:
+            apiVersion: hematoscope.app/v1
+            kind: JobRun
+            name: status-jobrun
+            namespace: job-template-run
+            timeout: 10s
+            for:
+              jsonPath:
+                path: .status.succeeded
+                value: "1"
+        - assert:
+            resource:
+              apiVersion: hematoscope.app/v1
+              kind: JobRun
+              metadata:
+                name: status-jobrun
+                namespace: job-template-run
+              status:
+                (startTime != null): true
+                (completionTime != null): true
+                (conditions | length(@) > `0`): true

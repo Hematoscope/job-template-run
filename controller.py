@@ -1,7 +1,11 @@
+import logging
 import os
 import kopf
 import kubernetes
 import yaml
+
+
+logger = logging.getLogger("kopf.controller")
 
 
 def get_template(namespace, name):
@@ -59,20 +63,30 @@ def configure(settings, **_):
 
 
 @kopf.on.create("hematoscope.app", "v1", "jobruns")
-def jobrun_create(spec, name, namespace, **_):
+def jobrun_create(spec, name, namespace, patch, **_):
     template_name = spec.get("templateRef")
     command = spec.get("command")
     args = spec.get("args")
 
     if not template_name:
+        patch.status["error"] = "templateRef must be specified"
+        patch.status["failed"] = 1
         raise kopf.PermanentError("templateRef must be specified")
 
-    template = get_template(namespace, template_name)
+    try:
+        template = get_template(namespace, template_name)
+    except kubernetes.client.exceptions.ApiException as e:
+        if e.status == 404:
+            patch.status["error"] = f"JobTemplate '{template_name}' not found"
+            patch.status["failed"] = 1
+            raise kopf.PermanentError(f"JobTemplate '{template_name}' not found")
+        else:
+            raise
     create_job(name, namespace, template, command, args)
 
 
 @kopf.on.event("batch", "v1", "jobs")
-def job_status_update(event, namespace, **_):
+def job_status_update(event, **_):
     job = event.get("object")
     if not job:
         return
@@ -80,23 +94,28 @@ def job_status_update(event, namespace, **_):
     jobrun_name = (
         job.get("metadata", {}).get("labels", {}).get("hematoscope.app/job-run")
     )
-    if not jobrun_name:
+    jobrun_namespace = job.get("metadata", {}).get("namespace")
+    if not jobrun_name or not jobrun_namespace:
         return
 
-    # Update the JobRun status
     job_status = job.get("status", {})
+    status_update = {
+        "startTime": job_status.get("startTime"),
+        "completionTime": job_status.get("completionTime"),
+        "conditions": job_status.get("conditions", []),
+        "active": job_status.get("active"),
+        "succeeded": job_status.get("succeeded"),
+        "failed": job_status.get("failed"),
+    }
     crd_api = kubernetes.client.CustomObjectsApi()
-    crd_api.patch_namespaced_custom_object(
-        group="hematoscope.app",
-        version="v1",
-        namespace=namespace,
-        plural="jobruns",
-        name=jobrun_name,
-        body={
-            "status": {
-                "startTime": job_status.get("startTime"),
-                "completionTime": job_status.get("completionTime"),
-                "conditions": job_status.get("conditions", []),
-            },
-        },
-    )
+    try:
+        crd_api.patch_namespaced_custom_object(
+            group="hematoscope.app",
+            version="v1",
+            namespace=jobrun_namespace,
+            plural="jobruns",
+            name=jobrun_name,
+            body={"status": status_update},
+        )
+    except kubernetes.client.exceptions.ApiException as e:
+        logger.warning(f"Failed to update JobRun status: {e}")

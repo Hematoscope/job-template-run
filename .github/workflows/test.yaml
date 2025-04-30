@@ -1,4 +1,4 @@
-name: Test Helm Chart and Controller
+name: Run tests
 
 on:
   push:
@@ -8,26 +8,11 @@ on:
 
 jobs:
   test:
-    name: Test Helm Chart and Controller
+    name: Run tests
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.13'
-
-      - name: Install dependencies
-        run: |
-          pip install kopf kubernetes pyyaml
-
-      - name: Set up kind
-        uses: helm/kind-action@v1.4.0
-        with:
-          version: v0.20.0
 
       - name: Install Helm
         uses: azure/setup-helm@v3
@@ -36,53 +21,27 @@ jobs:
 
       - name: Install Kyverno Chainsaw
         run: |
-          curl -Lo chainsaw.tar.gz https://github.com/kyverno/chainsaw/releases/latest/download/chainsaw-linux-amd64.tar.gz
+          curl -Lo chainsaw.tar.gz https://github.com/kyverno/chainsaw/releases/download/v0.2.12/chainsaw_linux_amd64.tar.gz
           tar -xzf chainsaw.tar.gz -C /usr/local/bin chainsaw
           chmod +x /usr/local/bin/chainsaw
 
-      - name: Load Docker image into kind cluster
-        run: |
-          kind load docker-image ghcr.io/hematoscope/job-template-run:0.12.0
+      - name: Install KinD
+        uses: helm/kind-action@v1.12.0
+        with:
+          version: v0.24.0
+          install_only: true
+
+      - name: Lint Helm chart
+        run: make lint
+
+      - name: Create KinD cluster
+        run: make kind
+
+      - name: Build and load Docker image into kind cluster
+        run: make build
 
       - name: Deploy Helm chart
-        run: |
-          helm install job-template-run ./charts/job-template-run --wait
+        run: make helm-install
 
-      - name: Test Helm chart validity
-        run: |
-          chainsaw validate ./charts/job-template-run
-
-      - name: Create test resources
-        run: |
-          kubectl apply -f - <<EOF
-          apiVersion: hematoscope.app/v1
-          kind: JobTemplate
-          metadata:
-            name: test-template
-          spec:
-            template:
-              spec:
-                containers:
-                  - name: test-container
-                    image: busybox
-                    command: ["echo"]
-                restartPolicy: Never
-          ---
-          apiVersion: hematoscope.app/v1
-          kind: JobRun
-          metadata:
-            name: test-run
-          spec:
-            templateRef: test-template
-            args: ["Hello, world!"]
-          EOF
-
-      - name: Verify controller functionality
-        run: |
-          kubectl wait --for=condition=complete job -l hematoscope.app/job-run=test-run --timeout=60s
-          kubectl logs job/$(kubectl get job -l hematoscope.app/job-run=test-run -o jsonpath='{.items[0].metadata.name}')
-
-      - name: Clean up
-        run: |
-          helm uninstall job-template-run
-          kind delete cluster
+      - name: Run tests
+        run: make test

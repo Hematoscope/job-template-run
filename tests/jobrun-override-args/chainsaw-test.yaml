@@ -1,0 +1,50 @@
+# Test: JobRun status is updated from the Job it creates
+---
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: jobrun-override-args
+spec:
+  steps:
+    - try:
+        - apply:
+            resource:
+              apiVersion: hematoscope.app/v1
+              kind: JobTemplate
+              metadata:
+                name: overridable-args-template
+              spec:
+                template:
+                  spec:
+                    containers:
+                      - name: busybox
+                        image: busybox
+                        command: ["sh", "-c"]
+                        args: ["echo done"]
+                    restartPolicy: Never
+        - apply:
+            resource:
+              apiVersion: hematoscope.app/v1
+              kind: JobRun
+              metadata:
+                name: overridden-args-jobrun
+              spec:
+                templateRef: overridable-args-template
+                args: ["echo overridden"]
+        - assert:
+            resource:
+              apiVersion: batch/v1
+              kind: Job
+              metadata:
+                labels:
+                  hematoscope.app/job-template: overridable-args-template
+                  hematoscope.app/job-run: overridden-args-jobrun
+              spec:
+                template:
+                  spec:
+                    containers:
+                      - name: busybox
+                        image: busybox
+                        command: ["sh", "-c"]
+                        args: ["echo overridden"]
+                    restartPolicy: Never

@@ -1,3 +1,15 @@
+## 0.13.0 (2025-04-30)
+
+### Feat
+
+- add tests ([bb5d326](https://github.com/hematoscope/job-template-run/commit/bb5d3268c4ed62718d8a1accd5ddec52925a8dd0))
+
+- add a liveness probe ([2c2cb3d](https://github.com/hematoscope/job-template-run/commit/2c2cb3d644cddce7eecbdec3a765ea4389bc3bfc))
+
+### Fix
+
+- set getter timeouts ([58944c3](https://github.com/hematoscope/job-template-run/commit/58944c33b446260f0bf273cf49e45d9e7380e688))
+
 ## 0.12.1 (2025-04-22)
 
 ### Fix

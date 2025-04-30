@@ -2,6 +2,11 @@ FROM mcr.microsoft.com/vscode/devcontainers/base:ubuntu-22.04
 
 ARG USERNAME=vscode
 
+RUN sudo apt update && sudo apt install --no-install-recommends -y vim
+
+ENV EDITOR=vim
+ENV GIT_EDITOR=vim
+
 RUN SNIPPET="export PROMPT_COMMAND='history -a' && export HISTFILE=/commandhistory/.bash_history" \
     && mkdir /commandhistory \
     && touch /commandhistory/.bash_history \

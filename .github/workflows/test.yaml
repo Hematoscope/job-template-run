@@ -19,11 +19,10 @@ jobs:
         with:
           version: v3.12.0
 
-      - name: Install Kyverno Chainsaw
-        run: |
-          curl -Lo chainsaw.tar.gz https://github.com/kyverno/chainsaw/releases/download/v0.2.12/chainsaw_linux_amd64.tar.gz
-          tar -xzf chainsaw.tar.gz -C /usr/local/bin chainsaw
-          chmod +x /usr/local/bin/chainsaw
+      - name: Install Chainsaw
+        uses: kyverno/action-install-chainsaw@v0.2.12
+        with:
+          release: v0.2.12
 
       - name: Install KinD
         uses: helm/kind-action@v1.12.0

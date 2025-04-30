@@ -37,14 +37,18 @@
       "type": "bind"
     },
     // bash history
-    "source=job-template-run-bashhistory,target=/commandhistory"
+    "source=job-template-run-bashhistory,target=/commandhistory,type=volume"
   ],
 
   // Use 'forwardPorts' to make a list of ports inside the container available locally.
   // "forwardPorts": [],
 
   // Use 'postCreateCommand' to run commands after the container is created.
-  "postCreateCommand": "uv sync",
+  "postCreateCommand": {
+    "Install Python Dependencies": "uv sync",
+    "Fix Volume Permissions": "sudo chown -R $(whoami): /commandhistory"
+  },
+
 
   // Configure tool-specific properties.
   "customizations": {

@@ -1,3 +1,9 @@
+## 0.16.0 (2025-05-07)
+
+### Feat
+
+- bump kopf to 1.37.5 again ([d80455d](https://github.com/hematoscope/job-template-run/commit/d80455dce898429e70e514b9d742a3b8369b4080))
+
 ## 0.15.0 (2025-05-07)
 
 ### Feat

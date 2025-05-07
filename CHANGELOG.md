@@ -1,3 +1,15 @@
+## 0.14.0 (2025-05-07)
+
+### Feat
+
+- downgrade kopf to 1.37.1 ([afe5860](https://github.com/hematoscope/job-template-run/commit/afe5860fb8afa0d92d8ff5401c4b350e3b0362b9))
+
+  We are having issues similar to
+
+  https://github.com/nolar/kopf/issues/1158, so hopefully this downgrade
+
+  might help keeping the controller stable over long periods of time.
+
 ## 0.13.0 (2025-04-30)
 
 ### Feat

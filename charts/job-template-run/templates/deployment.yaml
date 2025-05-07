@@ -42,6 +42,8 @@ spec:
               value: {{ .Chart.Version }}
             - name: APP_MANAGED_BY
               value: {{ .Release.Service }}
+            - name: TIMER_INTERVAL
+              value: "{{ .Values.timerInterval }}"
           livenessProbe:
             httpGet:
               path: /healthz

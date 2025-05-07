@@ -62,8 +62,15 @@ def configure(settings, **_):
     settings.watching.client_timeout = 60
 
 
-@kopf.on.create("hematoscope.app", "v1", "jobruns")
-def jobrun_create(spec, name, namespace, patch, **_):
+INTERVAL = float(os.getenv("TIMER_INTERVAL"))
+
+
+@kopf.timer("hematoscope.app", "v1", "jobruns", interval=INTERVAL)
+def jobrun_create_timer(spec, name, namespace, patch, status, **_):
+    # Only act if the JobRun is not already started (no status or not succeeded/failed)
+    if status and (status.get("succeeded") or status.get("failed")):
+        return
+
     template_name = spec.get("templateRef")
     command = spec.get("command")
     args = spec.get("args")
@@ -85,27 +92,20 @@ def jobrun_create(spec, name, namespace, patch, **_):
     create_job(name, namespace, template, command, args)
 
 
-@kopf.on.event("batch", "v1", "jobs")
-def job_status_update(event, **_):
-    job = event.get("object")
-    if not job:
-        return
-
-    jobrun_name = (
-        job.get("metadata", {}).get("labels", {}).get("hematoscope.app/job-run")
-    )
-    jobrun_namespace = job.get("metadata", {}).get("namespace")
+@kopf.timer("batch", "v1", "jobs", interval=INTERVAL)
+def job_status_update_timer(spec, name, namespace, status, meta, **_):
+    jobrun_name = meta.get("labels", {}).get("hematoscope.app/job-run")
+    jobrun_namespace = meta.get("namespace")
     if not jobrun_name or not jobrun_namespace:
         return
 
-    job_status = job.get("status", {})
     status_update = {
-        "startTime": job_status.get("startTime"),
-        "completionTime": job_status.get("completionTime"),
-        "conditions": job_status.get("conditions", []),
-        "active": job_status.get("active"),
-        "succeeded": job_status.get("succeeded"),
-        "failed": job_status.get("failed"),
+        "startTime": status.get("startTime"),
+        "completionTime": status.get("completionTime"),
+        "conditions": status.get("conditions", []),
+        "active": status.get("active"),
+        "succeeded": status.get("succeeded"),
+        "failed": status.get("failed"),
     }
     crd_api = kubernetes.client.CustomObjectsApi()
     try:

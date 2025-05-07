@@ -12,3 +12,5 @@ serviceAccount:
 
 rbac:
   create: true
+
+timerInterval: 30.0

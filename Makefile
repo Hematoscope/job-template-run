@@ -24,7 +24,7 @@ lint:
 
 helm-install:
 	kubectl create namespace $(NAMESPACE) || true
-	helm install $(HELM_RELEASE) $(HELM_CHART) -n $(NAMESPACE) --set image.tag=$$(git rev-parse --short HEAD)
+	helm install $(HELM_RELEASE) $(HELM_CHART) -n $(NAMESPACE) --set image.tag=$$(git rev-parse --short HEAD) --set timerInterval=5.0
 	kubectl wait --for=create pod -l app=job-template-run --timeout=30s -n $(NAMESPACE)
 	kubectl wait --for=condition=Ready pod -l app=job-template-run --timeout=30s -n $(NAMESPACE)
 

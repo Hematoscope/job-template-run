@@ -4,7 +4,7 @@ version = "0.15.0"
 description = "A Kubernetes controller for templated jobs and creating job runs"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = ["kopf==1.37.1", "kubernetes>=32.0.1", "pyyaml>=6.0.2"]
+dependencies = ["kopf>=1.37.5", "kubernetes>=32.0.1", "pyyaml>=6.0.2"]
 
 [dependency-groups]
 dev = [

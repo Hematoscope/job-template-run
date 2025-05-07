@@ -15,11 +15,14 @@ spec:
                 name: missing-template
               spec:
                 templateRef: does-not-exist
-        - assert:
-            resource:
-              apiVersion: hematoscope.app/v1
-              kind: JobRun
-              metadata:
-                name: missing-template
-              status:
-                failed: 1
+
+    - try:
+        - wait:
+            apiVersion: hematoscope.app/v1
+            kind: JobRun
+            name: missing-template
+            timeout: 15s
+            for:
+              jsonPath:
+                path: .status.failed
+                value: "1"

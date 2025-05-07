@@ -319,7 +319,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "kopf", specifier = "==1.37.1" },
+    { name = "kopf", specifier = ">=1.37.5" },
     { name = "kubernetes", specifier = ">=32.0.1" },
     { name = "pyyaml", specifier = ">=6.0.2" },
 ]
@@ -335,7 +335,7 @@ dev = [
 
 [[package]]
 name = "kopf"
-version = "1.37.1"
+version = "1.37.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -345,9 +345,9 @@ dependencies = [
     { name = "pyyaml" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/80/f1/6b132164de2cae56761ea84f7947f0f5fdcd0db2168adec811052131947d/kopf-1.37.1.tar.gz", hash = "sha256:f38829cb702d788ab536ecd51f10d83175b971874af1d6c8178a864cf9af4ece", size = 1190955, upload-time = "2024-01-20T17:31:44.667Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/5c/c3/271b59874f3ae7ef6aa3c2e6f994f95b257e2b7e19057e7e6ab8f32612a0/kopf-1.37.5.tar.gz", hash = "sha256:c468b4adc1c9ec7dde5bb852ab9b0d4e51e07b98c22538bc5dc5876422ba767c", size = 1192425, upload-time = "2025-03-22T16:32:22.096Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/08/2e/01e2faa18961ba23c4b8a48006b0c1897c25755e0425cbf0795945b757c5/kopf-1.37.1-py3-none-any.whl", hash = "sha256:dbeafe715987705d6fb44a49a26ca065b9e537a85c654efa94a520c6d16509d5", size = 207452, upload-time = "2024-01-20T17:31:39.299Z" },
+    { url = "https://files.pythonhosted.org/packages/c4/49/84f4994b242d1436bbcd9cc0154cbc9459420e7c9dbe9e15bb2b53a726ed/kopf-1.37.5-py3-none-any.whl", hash = "sha256:ca6999350052c2f179200bead2386cc35f5bed873f60af3cb8f8a736994e0d68", size = 208459, upload-time = "2025-03-22T16:32:20.044Z" },
 ]
 
 [[package]]

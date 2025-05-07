@@ -1,3 +1,9 @@
+## 0.15.0 (2025-05-07)
+
+### Feat
+
+- use kopf timers instead of event handlers ([3d3ef6f](https://github.com/hematoscope/job-template-run/commit/3d3ef6fdbd11b0f15a928cd326d46e98cfa2e3e6))
+
 ## 0.14.0 (2025-05-07)
 
 ### Feat

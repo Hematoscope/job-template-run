@@ -1,3 +1,11 @@
+## 0.16.1 (2025-05-08)
+
+### Fix
+
+- minimize granted rbac permissions ([dc0f75f](https://github.com/hematoscope/job-template-run/commit/dc0f75f44016b6ebde4e860bebdfcd20403f7278))
+
+- only create job if jobrun has no jobs running ([7d2bf0d](https://github.com/hematoscope/job-template-run/commit/7d2bf0dabd9519a1b9b04d55825f7e91909e307f))
+
 ## 0.16.0 (2025-05-07)
 
 ### Feat

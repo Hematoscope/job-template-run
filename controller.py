@@ -67,8 +67,16 @@ INTERVAL = float(os.getenv("TIMER_INTERVAL"))
 
 @kopf.timer("hematoscope.app", "v1", "jobruns", interval=INTERVAL)
 def jobrun_create_timer(spec, name, namespace, patch, status, **_):
-    # Only act if the JobRun is not already started (no status or not succeeded/failed)
-    if status and (status.get("succeeded") or status.get("failed")):
+    api = kubernetes.client.BatchV1Api()
+    existing_jobs = api.list_namespaced_job(
+        namespace,
+        label_selector=f"hematoscope.app/job-run={name}",
+    )
+
+    # Exit early if there are existing jobs or if the jobrun already succeeded or failed
+    if len(existing_jobs.items) > 0 or (
+        status and (status.get("succeeded") or status.get("failed"))
+    ):
         return
 
     template_name = spec.get("templateRef")

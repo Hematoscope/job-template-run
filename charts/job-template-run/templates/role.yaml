@@ -10,22 +10,20 @@ metadata:
     app.kubernetes.io/managed-by: {{ .Release.Service }}
 rules:
   - apiGroups: [""]
-    resources: ["pods"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: [""]
     resources: ["events"]
     verbs: ["create"]
   - apiGroups: ["batch"]
     resources: ["jobs"]
     verbs: ["create", "patch", "get", "list", "watch"]
+  - apiGroups: ["apiextensions.k8s.io"]
+    resources: ["customresourcedefinitions"]
+    verbs: ["list", "watch"]
+
 
   - apiGroups: ["hematoscope.app"]
     resources: ["jobruns"]
-    verbs: ["create", "patch"]
+    verbs: ["list", "patch", "watch"]
   - apiGroups: ["hematoscope.app"]
-    resources: ["jobtemplates", "jobruns"]
-    verbs: ["get", "list", "patch", "update", "watch"]
-  - apiGroups: ["apiextensions.k8s.io"]
-    resources: ["customresourcedefinitions"]
-    verbs: ["get", "list", "watch"]
+    resources: ["jobtemplates"]
+    verbs: ["get"]
 {{- end }}

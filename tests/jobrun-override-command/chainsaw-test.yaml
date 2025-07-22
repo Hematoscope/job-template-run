@@ -9,7 +9,7 @@ spec:
     - try:
         - apply:
             resource:
-              apiVersion: hematoscope.app/v1
+              apiVersion: cellbytes.io/v1
               kind: JobTemplate
               metadata:
                 name: overridable-command-template
@@ -24,7 +24,7 @@ spec:
                     restartPolicy: Never
         - apply:
             resource:
-              apiVersion: hematoscope.app/v1
+              apiVersion: cellbytes.io/v1
               kind: JobRun
               metadata:
                 name: overridden-command-jobrun
@@ -37,8 +37,8 @@ spec:
               kind: Job
               metadata:
                 labels:
-                  hematoscope.app/job-template: overridable-command-template
-                  hematoscope.app/job-run: overridden-command-jobrun
+                  cellbytes.io/job-template: overridable-command-template
+                  cellbytes.io/job-run: overridden-command-jobrun
               spec:
                 template:
                   spec:

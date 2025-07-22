@@ -9,7 +9,7 @@ spec:
     - try:
         - apply:
             resource:
-              apiVersion: hematoscope.app/v1
+              apiVersion: cellbytes.io/v1
               kind: JobRun
               metadata:
                 name: missing-template
@@ -18,7 +18,7 @@ spec:
 
     - try:
         - wait:
-            apiVersion: hematoscope.app/v1
+            apiVersion: cellbytes.io/v1
             kind: JobRun
             name: missing-template
             timeout: 15s

@@ -9,7 +9,7 @@ spec:
     - try:
         - apply:
             resource:
-              apiVersion: hematoscope.app/v1
+              apiVersion: cellbytes.io/v1
               kind: JobTemplate
               metadata:
                 name: status-template
@@ -23,7 +23,7 @@ spec:
                     restartPolicy: Never
         - apply:
             resource:
-              apiVersion: hematoscope.app/v1
+              apiVersion: cellbytes.io/v1
               kind: JobRun
               metadata:
                 name: status-jobrun
@@ -31,7 +31,7 @@ spec:
                 templateRef: status-template
     - try:
         - wait:
-            apiVersion: hematoscope.app/v1
+            apiVersion: cellbytes.io/v1
             kind: JobRun
             name: status-jobrun
             timeout: 15s
@@ -41,7 +41,7 @@ spec:
                 value: "1"
         - assert:
             resource:
-              apiVersion: hematoscope.app/v1
+              apiVersion: cellbytes.io/v1
               kind: JobRun
               metadata:
                 name: status-jobrun

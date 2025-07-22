@@ -14,9 +14,9 @@ Managing Kubernetes `Job`s can become repetitive and error-prone when defining s
 To install the `job-template-run` Helm chart, use the following command:
 
 ```bash
-helm repo add hematoscope https://hematoscope.github.io/job-template-run
+helm repo add cellbytes https://hematoscope.github.io/job-template-run
 helm repo update
-helm install job-template-run hematoscope/job-template-run
+helm install job-template-run cellbytes/job-template-run
 ```
 
 You can customize the installation by providing a [`values.yaml`](./charts/job-template-run/values.yaml) file with the `--values` flag.
@@ -26,6 +26,7 @@ You can customize the installation by providing a [`values.yaml`](./charts/job-t
 Suppose we have the following standard Kubernetes `Job`:
 
 `echo-hello-world-job.yaml`
+
 ```yaml
 apiVersion: batch/v1
 kind: Job
@@ -47,8 +48,9 @@ If we want to `echo` something else besides `"Hello, world!`, we need to duplica
 After applying the `CRD`s contained in this chart, we can split the `Job` into a `JobTemplate` and a `JobRun`:
 
 `echo-job-template.yaml`
+
 ```yaml
-apiVersion: hematoscope.app/v1
+apiVersion: cellbytes.io/v1
 kind: JobTemplate
 metadata:
   name: echo-template
@@ -63,8 +65,9 @@ spec:
 ```
 
 `echo-hello-world-job-run.yaml`
+
 ```yaml
-apiVersion: hematoscope.app/v1
+apiVersion: cellbytes.io/v1
 kind: JobRun
 metadata:
   name: echo-hello-world-run

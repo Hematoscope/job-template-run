@@ -11,7 +11,7 @@ logger = logging.getLogger("kopf.controller")
 def get_template(namespace, name):
     crd_api = kubernetes.client.CustomObjectsApi()
     return crd_api.get_namespaced_custom_object(
-        group="hematoscope.app",
+        group="cellbytes.io",
         version="v1",
         namespace=namespace,
         plural="jobtemplates",
@@ -34,8 +34,8 @@ def create_job(name, namespace, template, command=None, args=None):
         "app.kubernetes.io/instance": os.getenv("APP_INSTANCE"),
         "app.kubernetes.io/version": os.getenv("APP_VERSION"),
         "app.kubernetes.io/managed-by": os.getenv("APP_MANAGED_BY"),
-        "hematoscope.app/job-template": template["metadata"]["name"],
-        "hematoscope.app/job-run": name,
+        "cellbytes.io/job-template": template["metadata"]["name"],
+        "cellbytes.io/job-run": name,
     }
 
     job_spec["template"].setdefault("metadata", {}).setdefault("labels", {}).update(
@@ -65,12 +65,12 @@ def configure(settings, **_):
 INTERVAL = float(os.getenv("TIMER_INTERVAL"))
 
 
-@kopf.timer("hematoscope.app", "v1", "jobruns", interval=INTERVAL)
+@kopf.timer("cellbytes.io", "v1", "jobruns", interval=INTERVAL)
 def jobrun_create_timer(spec, name, namespace, patch, status, **_):
     api = kubernetes.client.BatchV1Api()
     existing_jobs = api.list_namespaced_job(
         namespace,
-        label_selector=f"hematoscope.app/job-run={name}",
+        label_selector=f"cellbytes.io/job-run={name}",
     )
 
     # Exit early if there are existing jobs or if the jobrun already succeeded or failed
@@ -102,7 +102,7 @@ def jobrun_create_timer(spec, name, namespace, patch, status, **_):
 
 @kopf.timer("batch", "v1", "jobs", interval=INTERVAL)
 def job_status_update_timer(spec, name, namespace, status, meta, **_):
-    jobrun_name = meta.get("labels", {}).get("hematoscope.app/job-run")
+    jobrun_name = meta.get("labels", {}).get("cellbytes.io/job-run")
     jobrun_namespace = meta.get("namespace")
     if not jobrun_name or not jobrun_namespace:
         return
@@ -118,7 +118,7 @@ def job_status_update_timer(spec, name, namespace, status, meta, **_):
     crd_api = kubernetes.client.CustomObjectsApi()
     try:
         crd_api.patch_namespaced_custom_object(
-            group="hematoscope.app",
+            group="cellbytes.io",
             version="v1",
             namespace=jobrun_namespace,
             plural="jobruns",

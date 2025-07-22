@@ -7,7 +7,7 @@ spec:
     - try:
         - apply:
             resource:
-              apiVersion: hematoscope.app/v1
+              apiVersion: cellbytes.io/v1
               kind: JobTemplate
               metadata:
                 name: example-template
@@ -21,7 +21,7 @@ spec:
                     restartPolicy: Never
         - apply:
             resource:
-              apiVersion: hematoscope.app/v1
+              apiVersion: cellbytes.io/v1
               kind: JobRun
               metadata:
                 name: example-jobrun
@@ -33,5 +33,5 @@ spec:
               kind: Job
               metadata:
                 labels:
-                  hematoscope.app/job-template: example-template
-                  hematoscope.app/job-run: example-jobrun
+                  cellbytes.io/job-template: example-template
+                  cellbytes.io/job-run: example-jobrun

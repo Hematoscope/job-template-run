@@ -20,10 +20,10 @@ rules:
     verbs: ["list", "watch"]
 
 
-  - apiGroups: ["hematoscope.app"]
+  - apiGroups: ["cellbytes.io"]
     resources: ["jobruns"]
     verbs: ["list", "patch", "watch"]
-  - apiGroups: ["hematoscope.app"]
+  - apiGroups: ["cellbytes.io"]
     resources: ["jobtemplates"]
     verbs: ["get"]
 {{- end }}

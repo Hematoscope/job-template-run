@@ -9,7 +9,7 @@ spec:
     - try:
         - apply:
             resource:
-              apiVersion: hematoscope.app/v1
+              apiVersion: cellbytes.io/v1
               kind: JobTemplate
               metadata:
                 name: overridable-args-template
@@ -24,7 +24,7 @@ spec:
                     restartPolicy: Never
         - apply:
             resource:
-              apiVersion: hematoscope.app/v1
+              apiVersion: cellbytes.io/v1
               kind: JobRun
               metadata:
                 name: overridden-args-jobrun
@@ -37,8 +37,8 @@ spec:
               kind: Job
               metadata:
                 labels:
-                  hematoscope.app/job-template: overridable-args-template
-                  hematoscope.app/job-run: overridden-args-jobrun
+                  cellbytes.io/job-template: overridable-args-template
+                  cellbytes.io/job-run: overridden-args-jobrun
               spec:
                 template:
                   spec:

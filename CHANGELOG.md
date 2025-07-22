@@ -1,3 +1,13 @@
+## 0.17.0 (2025-07-22)
+
+### Feat
+
+- rename namespace from hematoscope.app to cellbytes.io ([17894f8](https://github.com/hematoscope/job-template-run/commit/17894f88f052ca4ddae6d801ed4b9ceca50f2749))
+
+### Fix
+
+- crd-jobtemplate whitespace ([4d4530b](https://github.com/hematoscope/job-template-run/commit/4d4530ba5c9ac781cb86791051955a83b32a1a8f))
+
 ## 0.16.1 (2025-05-08)
 
 ### Fix

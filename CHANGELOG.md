@@ -1,3 +1,9 @@
+## 0.18.0 (2026-03-25)
+
+### Feat
+
+- add callback functionality to job status updates ([3570e16](https://github.com/hematoscope/job-template-run/commit/3570e16086b441d31a9136018b5d0de2a7274186))
+
 ## 0.17.0 (2025-07-22)
 
 ### Feat

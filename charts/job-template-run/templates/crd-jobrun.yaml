@@ -27,6 +27,10 @@ spec:
                   type: array
                   items:
                     type: string
+                callbackUrl:
+                  type: string
+                callbackToken:
+                  type: string
             status:
               type: object
               x-kubernetes-preserve-unknown-fields: true

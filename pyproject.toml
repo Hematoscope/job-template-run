@@ -4,16 +4,20 @@ version = "0.17.0"
 description = "A Kubernetes controller for templated jobs and creating job runs"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = ["kopf>=1.37.5", "kubernetes>=32.0.1", "pyyaml>=6.0.2"]
+dependencies = ["httpx>=0.28.0", "kopf>=1.37.5", "kubernetes>=32.0.1", "pyyaml>=6.0.2"]
 
 [dependency-groups]
 dev = [
     "pyright>=1.1.399",
+    "pytest>=8.0.0",
     "ruff>=0.11.5",
     "kubernetes-stubs-elephant-fork>=32.0.1",
     "commitizen>=4.6.0",
     "cz-changeup>=1.1.2",
 ]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
 
 [tool.commitizen]
 name = "cz_changeup"

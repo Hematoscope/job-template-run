@@ -1,5 +1,6 @@
 import logging
 import os
+import httpx
 import kopf
 import kubernetes
 import yaml
@@ -19,7 +20,15 @@ def get_template(namespace, name):
     )
 
 
-def create_job(name, namespace, template, command=None, args=None):
+def create_job(
+    name,
+    namespace,
+    template,
+    command=None,
+    args=None,
+    callback_url=None,
+    callback_token=None,
+):
     template = yaml.safe_load(yaml.dump(template))
     job_spec = template["spec"]
 
@@ -42,12 +51,19 @@ def create_job(name, namespace, template, command=None, args=None):
         labels
     )
 
+    annotations = {}
+    if callback_url:
+        annotations["cellbytes.io/callback-url"] = callback_url
+    if callback_token:
+        annotations["cellbytes.io/callback-token"] = callback_token
+
     job_manifest = {
         "apiVersion": "batch/v1",
         "kind": "Job",
         "metadata": {
             "generateName": f"{template['metadata']['name']}-{name}-",
             "labels": labels,
+            "annotations": annotations,
         },
         "spec": job_spec,
     }
@@ -82,6 +98,8 @@ def jobrun_create_timer(spec, name, namespace, patch, status, **_):
     template_name = spec.get("templateRef")
     command = spec.get("command")
     args = spec.get("args")
+    callback_url = spec.get("callbackUrl")
+    callback_token = spec.get("callbackToken")
 
     if not template_name:
         patch.status["error"] = "templateRef must be specified"
@@ -97,7 +115,7 @@ def jobrun_create_timer(spec, name, namespace, patch, status, **_):
             raise kopf.PermanentError(f"JobTemplate '{template_name}' not found")
         else:
             raise
-    create_job(name, namespace, template, command, args)
+    create_job(name, namespace, template, command, args, callback_url, callback_token)
 
 
 @kopf.timer("batch", "v1", "jobs", interval=INTERVAL)
@@ -127,3 +145,39 @@ def job_status_update_timer(spec, name, namespace, status, meta, **_):
         )
     except kubernetes.client.exceptions.ApiException as e:
         logger.warning(f"Failed to update JobRun status: {e}")
+
+    conditions = status.get("conditions") or []
+    is_failed = any(
+        c.get("type") == "Failed" and c.get("status") == "True" for c in conditions
+    )
+    is_complete = any(
+        c.get("type") == "Complete" and c.get("status") == "True" for c in conditions
+    )
+    callback_url = (meta.get("annotations") or {}).get("cellbytes.io/callback-url")
+    callback_token = (meta.get("annotations") or {}).get("cellbytes.io/callback-token")
+    callback_sent = (meta.get("annotations") or {}).get(
+        "cellbytes.io/callback-sent"
+    ) == "true"
+
+    terminal_status = "Complete" if is_complete else "Failed" if is_failed else None
+
+    if callback_url and terminal_status and not callback_sent:
+        headers = {}
+        if callback_token:
+            headers["Authorization"] = f"Bearer {callback_token}"
+        try:
+            httpx.post(
+                callback_url,
+                json={"name": jobrun_name, "status": terminal_status},
+                headers=headers,
+                timeout=10,
+            )
+        except Exception as e:
+            logger.warning(f"Failed to send callback to {callback_url}: {e}")
+        # Mark sent regardless of HTTP outcome to avoid infinite retries on bad URLs
+        batch_api = kubernetes.client.BatchV1Api()
+        batch_api.patch_namespaced_job(
+            name=name,
+            namespace=namespace,
+            body={"metadata": {"annotations": {"cellbytes.io/callback-sent": "true"}}},
+        )

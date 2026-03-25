@@ -32,6 +32,7 @@ helm-uninstall:
 	helm uninstall $(HELM_RELEASE) -n $(NAMESPACE) || true
 
 test:
+	TIMER_INTERVAL=15 uv run pytest tests/test_controller.py
 	chainsaw test tests/
 
 all: kind build helm-install test

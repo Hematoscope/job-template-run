@@ -2,15 +2,29 @@ import logging
 import os
 import httpx
 import kopf
-import kubernetes
 import yaml
+from kubernetes import client, config
+from kubernetes.client.exceptions import ApiException
 
 
 logger = logging.getLogger("kopf.controller")
 
 
+@kopf.on.login()
+def login(**kwargs):
+    # kopf's default client-piggybacking login reads the API token from the
+    # kubernetes client's api_key['authorization'], but kubernetes>=33 stores it
+    # under api_key['BearerToken']. That mismatch makes kopf's watch/patch stream
+    # fall back to anonymous, 403-rejected requests, so nothing reconciles. Read
+    # the in-cluster service-account token directly to stay independent of the
+    # client's key naming, falling back to a kubeconfig for local runs.
+    return kopf.login_with_service_account(**kwargs) or kopf.login_with_kubeconfig(
+        **kwargs
+    )
+
+
 def get_template(namespace, name):
-    crd_api = kubernetes.client.CustomObjectsApi()
+    crd_api = client.CustomObjectsApi()
     return crd_api.get_namespaced_custom_object(
         group="cellbytes.io",
         version="v1",
@@ -67,23 +81,35 @@ def create_job(
         },
         "spec": job_spec,
     }
-    batch_v1 = kubernetes.client.BatchV1Api()
-    batch_v1.create_namespaced_job(namespace=namespace, body=job_manifest)
+    batch_v1 = client.BatchV1Api()
+    # The client serializes a plain dict body; the stub only types V1Job.
+    batch_v1.create_namespaced_job(namespace=namespace, body=job_manifest)  # pyright: ignore[reportArgumentType]
 
 
 @kopf.on.startup()
 def configure(settings, **_):
+    # Load credentials for our own kubernetes client calls (the @kopf.on.login
+    # handler only authenticates kopf's own watch/patch stream).
+    try:
+        config.load_incluster_config()
+    except config.ConfigException:
+        config.load_kube_config()
+
+    # kopf >=1.44 detects silently dropped watch connections behind cloud load
+    # balancers (where the operator<->LB socket stays open while the LB<->API
+    # connection dies) by requesting bookmark heartbeats and reconnecting when
+    # no event arrives within inactivity_timeout.
     settings.networking.request_timeout = 60
-    settings.watching.server_timeout = 60
-    settings.watching.client_timeout = 60
+    settings.watching.inactivity_timeout = 70
+    settings.watching.server_timeout = 600
 
 
-INTERVAL = float(os.getenv("TIMER_INTERVAL"))
+INTERVAL = float(os.getenv("TIMER_INTERVAL", "30"))
 
 
 @kopf.timer("cellbytes.io", "v1", "jobruns", interval=INTERVAL)
 def jobrun_create_timer(spec, name, namespace, patch, status, **_):
-    api = kubernetes.client.BatchV1Api()
+    api = client.BatchV1Api()
     existing_jobs = api.list_namespaced_job(
         namespace,
         label_selector=f"cellbytes.io/job-run={name}",
@@ -108,7 +134,7 @@ def jobrun_create_timer(spec, name, namespace, patch, status, **_):
 
     try:
         template = get_template(namespace, template_name)
-    except kubernetes.client.exceptions.ApiException as e:
+    except ApiException as e:
         if e.status == 404:
             patch.status["error"] = f"JobTemplate '{template_name}' not found"
             patch.status["failed"] = 1
@@ -118,7 +144,13 @@ def jobrun_create_timer(spec, name, namespace, patch, status, **_):
     create_job(name, namespace, template, command, args, callback_url, callback_token)
 
 
-@kopf.timer("batch", "v1", "jobs", interval=INTERVAL)
+@kopf.timer(
+    "batch",
+    "v1",
+    "jobs",
+    interval=INTERVAL,
+    labels={"cellbytes.io/job-run": kopf.PRESENT},
+)
 def job_status_update_timer(spec, name, namespace, status, meta, **_):
     jobrun_name = meta.get("labels", {}).get("cellbytes.io/job-run")
     jobrun_namespace = meta.get("namespace")
@@ -133,7 +165,7 @@ def job_status_update_timer(spec, name, namespace, status, meta, **_):
         "succeeded": status.get("succeeded"),
         "failed": status.get("failed"),
     }
-    crd_api = kubernetes.client.CustomObjectsApi()
+    crd_api = client.CustomObjectsApi()
     try:
         crd_api.patch_namespaced_custom_object(
             group="cellbytes.io",
@@ -143,7 +175,7 @@ def job_status_update_timer(spec, name, namespace, status, meta, **_):
             name=jobrun_name,
             body={"status": status_update},
         )
-    except kubernetes.client.exceptions.ApiException as e:
+    except ApiException as e:
         logger.warning(f"Failed to update JobRun status: {e}")
 
     conditions = status.get("conditions") or []
@@ -175,7 +207,7 @@ def job_status_update_timer(spec, name, namespace, status, meta, **_):
         except Exception as e:
             logger.warning(f"Failed to send callback to {callback_url}: {e}")
         # Mark sent regardless of HTTP outcome to avoid infinite retries on bad URLs
-        batch_api = kubernetes.client.BatchV1Api()
+        batch_api = client.BatchV1Api()
         batch_api.patch_namespaced_job(
             name=name,
             namespace=namespace,

@@ -26,7 +26,7 @@ MINIMAL_TEMPLATE = {
 
 
 def test_create_job_sets_callback_url_annotation():
-    with mock.patch("controller.kubernetes.client.BatchV1Api") as mock_batch:
+    with mock.patch("controller.client.BatchV1Api") as mock_batch:
         mock_create = mock_batch.return_value.create_namespaced_job
         controller.create_job(
             name="my-run",
@@ -44,7 +44,7 @@ def test_create_job_sets_callback_url_annotation():
 
 
 def test_create_job_sets_callback_token_annotation():
-    with mock.patch("controller.kubernetes.client.BatchV1Api") as mock_batch:
+    with mock.patch("controller.client.BatchV1Api") as mock_batch:
         mock_create = mock_batch.return_value.create_namespaced_job
         controller.create_job(
             name="my-run",
@@ -65,7 +65,7 @@ def test_create_job_sets_callback_token_annotation():
 
 
 def test_create_job_no_callback_url_no_annotations():
-    with mock.patch("controller.kubernetes.client.BatchV1Api") as mock_batch:
+    with mock.patch("controller.client.BatchV1Api") as mock_batch:
         mock_create = mock_batch.return_value.create_namespaced_job
         controller.create_job(
             name="my-run",
@@ -127,8 +127,8 @@ def _call_timer(
 
 def test_callback_fired_on_complete_with_token():
     with (
-        mock.patch("controller.kubernetes.client.CustomObjectsApi"),
-        mock.patch("controller.kubernetes.client.BatchV1Api") as mock_batch,
+        mock.patch("controller.client.CustomObjectsApi"),
+        mock.patch("controller.client.BatchV1Api") as mock_batch,
         mock.patch("controller.httpx.post") as mock_post,
     ):
         mock_patch_job = mock_batch.return_value.patch_namespaced_job
@@ -154,8 +154,8 @@ def test_callback_fired_on_complete_with_token():
 
 def test_callback_fired_on_failed_without_token():
     with (
-        mock.patch("controller.kubernetes.client.CustomObjectsApi"),
-        mock.patch("controller.kubernetes.client.BatchV1Api") as mock_batch,
+        mock.patch("controller.client.CustomObjectsApi"),
+        mock.patch("controller.client.BatchV1Api") as mock_batch,
         mock.patch("controller.httpx.post") as mock_post,
     ):
         mock_patch_job = mock_batch.return_value.patch_namespaced_job
@@ -176,8 +176,8 @@ def test_callback_fired_on_failed_without_token():
 
 def test_callback_not_fired_when_already_sent():
     with (
-        mock.patch("controller.kubernetes.client.CustomObjectsApi"),
-        mock.patch("controller.kubernetes.client.BatchV1Api"),
+        mock.patch("controller.client.CustomObjectsApi"),
+        mock.patch("controller.client.BatchV1Api"),
         mock.patch("controller.httpx.post") as mock_post,
     ):
         _call_timer(
@@ -191,8 +191,8 @@ def test_callback_not_fired_when_already_sent():
 
 def test_callback_not_fired_when_not_terminal():
     with (
-        mock.patch("controller.kubernetes.client.CustomObjectsApi"),
-        mock.patch("controller.kubernetes.client.BatchV1Api"),
+        mock.patch("controller.client.CustomObjectsApi"),
+        mock.patch("controller.client.BatchV1Api"),
         mock.patch("controller.httpx.post") as mock_post,
     ):
         _call_timer(
@@ -205,8 +205,8 @@ def test_callback_not_fired_when_not_terminal():
 
 def test_callback_not_fired_when_no_url():
     with (
-        mock.patch("controller.kubernetes.client.CustomObjectsApi"),
-        mock.patch("controller.kubernetes.client.BatchV1Api"),
+        mock.patch("controller.client.CustomObjectsApi"),
+        mock.patch("controller.client.BatchV1Api"),
         mock.patch("controller.httpx.post") as mock_post,
     ):
         _call_timer(conditions=_make_complete_conditions())
@@ -216,8 +216,8 @@ def test_callback_not_fired_when_no_url():
 
 def test_annotation_marked_sent_even_when_http_call_fails():
     with (
-        mock.patch("controller.kubernetes.client.CustomObjectsApi"),
-        mock.patch("controller.kubernetes.client.BatchV1Api") as mock_batch,
+        mock.patch("controller.client.CustomObjectsApi"),
+        mock.patch("controller.client.BatchV1Api") as mock_batch,
         mock.patch(
             "controller.httpx.post", side_effect=Exception("connection refused")
         ) as mock_post,

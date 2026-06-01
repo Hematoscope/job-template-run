@@ -31,6 +31,7 @@ spec:
             - "run"
             - "--liveness=http://0.0.0.0:8080/healthz"
             - "--standalone"
+            - "--all-namespaces"
             - "--verbose"
             - "/app/controller.py"
           env:
@@ -48,3 +49,7 @@ spec:
             httpGet:
               path: /healthz
               port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3

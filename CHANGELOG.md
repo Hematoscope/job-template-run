@@ -1,3 +1,9 @@
+## 0.19.0 (2026-06-01)
+
+### Feat
+
+- upgrade dependencies ([e13006b](https://github.com/hematoscope/job-template-run/commit/e13006b067631d880dfb4121d3350bc106387921))
+
 ## 0.18.0 (2026-03-25)
 
 ### Feat

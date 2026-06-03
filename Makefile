@@ -4,7 +4,7 @@ KIND_CLUSTER_NAME=job-template-run-test
 NAMESPACE=job-template-run
 HELM_CHART=charts/job-template-run
 HELM_RELEASE=job-template-run
-DOCKER_IMAGE=ghcr.io/hematoscope/job-template-run
+DOCKER_IMAGE=ghcr.io/cellbytes/job-template-run
 
 
 .PHONY: kind kind-down helm-install helm-uninstall build test all clean

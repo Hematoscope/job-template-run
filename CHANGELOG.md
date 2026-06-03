@@ -1,3 +1,33 @@
+## 0.20.0 (2026-06-03)
+
+### Feat
+
+- ship controller NetworkPolicy and add callback-delivery e2e tests ([191f6fc](https://github.com/cellbytes/job-template-run/commit/191f6fc5e86191b6a4c7b813adf2469f78966096))
+
+  Add a chart NetworkPolicy (egress to DNS, the API server, and the callback
+
+  endpoint) so the controller functions under a default-deny policy; add
+
+  chainsaw e2e tests verifying real callback delivery and the 5xx-retry
+
+  behaviour; add a make dev-e2e target to run the suite against local code.
+
+  Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+
+### Fix
+
+- deliver job-status callback reliably ([9c79201](https://github.com/cellbytes/job-template-run/commit/9c7920109c6da1465aeaba5e4e5a44baa72d06ce))
+
+  Only mark the Job callback-sent after a genuine delivery (2xx, or 4xx which
+
+  will not improve on retry); on a 5xx or network error leave it unset so the
+
+  next timer tick retries instead of dropping the terminal status and leaving
+
+  tasks stuck processing.
+
+  Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+
 ## 0.19.1 (2026-06-03)
 
 ### Fix

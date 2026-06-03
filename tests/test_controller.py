@@ -125,11 +125,18 @@ def _call_timer(
 # ---------------------------------------------------------------------------
 
 
+def _ok_response(status_code=204):
+    """Returns a mock httpx response with the given status code."""
+    response = mock.Mock()
+    response.status_code = status_code
+    return response
+
+
 def test_callback_fired_on_complete_with_token():
     with (
         mock.patch("controller.client.CustomObjectsApi"),
         mock.patch("controller.client.BatchV1Api") as mock_batch,
-        mock.patch("controller.httpx.post") as mock_post,
+        mock.patch("controller.httpx.post", return_value=_ok_response()) as mock_post,
     ):
         mock_patch_job = mock_batch.return_value.patch_namespaced_job
 
@@ -156,7 +163,7 @@ def test_callback_fired_on_failed_without_token():
     with (
         mock.patch("controller.client.CustomObjectsApi"),
         mock.patch("controller.client.BatchV1Api") as mock_batch,
-        mock.patch("controller.httpx.post") as mock_post,
+        mock.patch("controller.httpx.post", return_value=_ok_response()) as mock_post,
     ):
         mock_patch_job = mock_batch.return_value.patch_namespaced_job
 
@@ -214,7 +221,7 @@ def test_callback_not_fired_when_no_url():
         mock_post.assert_not_called()
 
 
-def test_annotation_marked_sent_even_when_http_call_fails():
+def test_annotation_not_marked_sent_when_http_call_fails():
     with (
         mock.patch("controller.client.CustomObjectsApi"),
         mock.patch("controller.client.BatchV1Api") as mock_batch,
@@ -230,7 +237,49 @@ def test_annotation_marked_sent_even_when_http_call_fails():
         )
 
         mock_post.assert_called_once()
-        # Annotation must still be patched despite the HTTP failure
+        # A network failure must leave the annotation unset so the next timer tick
+        # retries the callback instead of dropping it.
+        mock_patch_job.assert_not_called()
+
+
+def test_annotation_not_marked_sent_on_5xx_response():
+    with (
+        mock.patch("controller.client.CustomObjectsApi"),
+        mock.patch("controller.client.BatchV1Api") as mock_batch,
+        mock.patch(
+            "controller.httpx.post", return_value=_ok_response(503)
+        ) as mock_post,
+    ):
+        mock_patch_job = mock_batch.return_value.patch_namespaced_job
+
+        _call_timer(
+            conditions=_make_failed_conditions(),
+            callback_url="https://example.com/cb",
+        )
+
+        mock_post.assert_called_once()
+        # A 5xx is transient; leave unsent so it retries.
+        mock_patch_job.assert_not_called()
+
+
+def test_annotation_marked_sent_on_4xx_response():
+    with (
+        mock.patch("controller.client.CustomObjectsApi"),
+        mock.patch("controller.client.BatchV1Api") as mock_batch,
+        mock.patch(
+            "controller.httpx.post", return_value=_ok_response(401)
+        ) as mock_post,
+    ):
+        mock_patch_job = mock_batch.return_value.patch_namespaced_job
+
+        _call_timer(
+            conditions=_make_failed_conditions(),
+            callback_url="https://example.com/cb",
+        )
+
+        mock_post.assert_called_once()
+        # A 4xx means the request is malformed/unauthorized; retrying will not help,
+        # so mark it sent to stop retrying.
         mock_patch_job.assert_called_once_with(
             name="my-job",
             namespace="default",

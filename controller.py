@@ -197,19 +197,37 @@ def job_status_update_timer(spec, name, namespace, status, meta, **_):
         headers = {}
         if callback_token:
             headers["Authorization"] = f"Bearer {callback_token}"
+        delivered = False
         try:
-            httpx.post(
+            response = httpx.post(
                 callback_url,
                 json={"name": jobrun_name, "status": terminal_status},
                 headers=headers,
                 timeout=10,
             )
+            # 2xx means accepted; 4xx means our request is malformed/unauthorized
+            # and retrying will not help, so both count as delivered. A 5xx is a
+            # transient server-side error worth retrying.
+            delivered = response.status_code < 500
+            if not delivered:
+                logger.warning(
+                    f"Callback to {callback_url} returned {response.status_code}, "
+                    "will retry on next tick"
+                )
         except Exception as e:
+            # Network-level failure (app rolling out, DNS blip, timeout). Leave the
+            # callback unsent so the next timer tick retries it.
             logger.warning(f"Failed to send callback to {callback_url}: {e}")
-        # Mark sent regardless of HTTP outcome to avoid infinite retries on bad URLs
-        batch_api = client.BatchV1Api()
-        batch_api.patch_namespaced_job(
-            name=name,
-            namespace=namespace,
-            body={"metadata": {"annotations": {"cellbytes.io/callback-sent": "true"}}},
-        )
+
+        # Only mark sent once the callback was actually delivered. Retries are
+        # naturally bounded by the job's ttlSecondsAfterFinished: once the job is
+        # garbage-collected the timer stops firing for it.
+        if delivered:
+            batch_api = client.BatchV1Api()
+            batch_api.patch_namespaced_job(
+                name=name,
+                namespace=namespace,
+                body={
+                    "metadata": {"annotations": {"cellbytes.io/callback-sent": "true"}}
+                },
+            )

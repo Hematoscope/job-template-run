@@ -1,0 +1,41 @@
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "job-template-run.fullname" . }}-controller
+  labels:
+    app.kubernetes.io/name: {{ include "job-template-run.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/version: {{ .Chart.Version }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  # Selects the controller's own pods, so the policy matches regardless of any
+  # env/overlay labels added downstream by Kustomize.
+  podSelector:
+    matchLabels:
+      app: {{ include "job-template-run.name" . }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow kubelet liveness/readiness probes on the kopf health port.
+    # Pod IPs are not externally routable so opening to all sources is safe.
+    - ports:
+        - port: 8080
+          protocol: TCP
+  egress:
+    # DNS resolution.
+    - ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    # Kubernetes API server (watch/patch JobRuns and Jobs) plus the job-status
+    # callback endpoint(s). Without callback egress the controller cannot
+    # deliver terminal job status and failed tasks stay stuck "processing".
+    {{- range .Values.networkPolicy.egressPorts }}
+    - ports:
+        - port: {{ . }}
+          protocol: TCP
+    {{- end }}
+{{- end }}

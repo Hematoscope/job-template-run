@@ -1,0 +1,121 @@
+# Test: the controller delivers the HTTP callback when a Job fails, and marks
+# the Job as callback-sent only after a successful (2xx) delivery.
+#
+# A tiny in-cluster nginx receiver returns 204 for any request. The JobRun runs
+# a container that exits non-zero, so the Job reaches a terminal Failed
+# condition; the controller must then POST the callback to the receiver and set
+# the cellbytes.io/callback-sent annotation on the Job.
+---
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: jobrun-callback-delivered
+spec:
+  steps:
+    # Stand up the callback receiver (always answers 204) and wait until ready.
+    - try:
+        - apply:
+            resource:
+              apiVersion: v1
+              kind: ConfigMap
+              metadata:
+                name: callback-receiver
+              data:
+                nginx.conf: |
+                  events {}
+                  http {
+                    server {
+                      listen 80;
+                      location / { return 204; }
+                    }
+                  }
+        - apply:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: callback-receiver
+              spec:
+                replicas: 1
+                selector:
+                  matchLabels:
+                    app: callback-receiver
+                template:
+                  metadata:
+                    labels:
+                      app: callback-receiver
+                  spec:
+                    containers:
+                      - name: nginx
+                        image: nginx:alpine
+                        ports:
+                          - containerPort: 80
+                        volumeMounts:
+                          - name: conf
+                            mountPath: /etc/nginx/nginx.conf
+                            subPath: nginx.conf
+                    volumes:
+                      - name: conf
+                        configMap:
+                          name: callback-receiver
+        - apply:
+            resource:
+              apiVersion: v1
+              kind: Service
+              metadata:
+                name: callback-receiver
+              spec:
+                selector:
+                  app: callback-receiver
+                ports:
+                  - port: 80
+                    targetPort: 80
+        - wait:
+            apiVersion: apps/v1
+            kind: Deployment
+            name: callback-receiver
+            timeout: 60s
+            for:
+              condition:
+                name: Available
+                value: "true"
+    # Run a failing job whose callback points at the receiver.
+    - try:
+        - apply:
+            resource:
+              apiVersion: cellbytes.io/v1
+              kind: JobTemplate
+              metadata:
+                name: callback-fail-template
+              spec:
+                backoffLimit: 0
+                template:
+                  spec:
+                    containers:
+                      - name: busybox
+                        image: busybox
+                        command: ["sh", "-c", "exit 1"]
+                    restartPolicy: Never
+        - apply:
+            resource:
+              apiVersion: cellbytes.io/v1
+              kind: JobRun
+              metadata:
+                name: callback-fail-jobrun
+              spec:
+                templateRef: callback-fail-template
+                # Receiver FQDN includes the per-test namespace chainsaw creates.
+                callbackUrl: (join('', ['http://callback-receiver.', $namespace, '.svc.cluster.local/cb']))
+                callbackToken: secret-token
+    # The controller must deliver the callback and then mark the Job sent.
+    - try:
+        - assert:
+            timeout: 90s
+            resource:
+              apiVersion: batch/v1
+              kind: Job
+              metadata:
+                labels:
+                  cellbytes.io/job-run: callback-fail-jobrun
+                annotations:
+                  cellbytes.io/callback-sent: "true"

@@ -13,4 +13,16 @@ serviceAccount:
 rbac:
   create: true
 
+# NetworkPolicy for the controller. Required in clusters with a default-deny
+# policy, where the controller would otherwise be unable to reach DNS, the
+# Kubernetes API, or the callback endpoint.
+networkPolicy:
+  enabled: false
+  # TCP egress ports beyond DNS (53). 443 is the Kubernetes API server; 8000 is
+  # the app's job-status callback endpoint. Override per environment (e.g. add
+  # the live-server port used by the integration test in dev).
+  egressPorts:
+    - 443
+    - 8000
+
 timerInterval: 30.0

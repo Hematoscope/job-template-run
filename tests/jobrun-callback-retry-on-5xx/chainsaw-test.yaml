@@ -1,0 +1,142 @@
+# Test: when the callback endpoint returns 5xx, the controller does NOT mark the
+# Job as callback-sent, so it will retry on a later tick instead of dropping the
+# terminal status. This guards the delivery-reliability fix (a dropped callback
+# is what leaves failed tasks stuck "processing").
+#
+# A tiny in-cluster nginx receiver always returns 503. The JobRun runs a failing
+# container; the controller attempts the callback, gets 503, and must leave the
+# cellbytes.io/callback-sent annotation unset.
+---
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: jobrun-callback-retry-on-5xx
+spec:
+  # The controller keeps retrying the (always-503) callback every tick, and each
+  # blocking POST briefly occupies a kopf worker, so finalizer removal during
+  # teardown is slower than the default 30s. Give cleanup ample room.
+  timeouts:
+    delete: 120s
+    cleanup: 120s
+  steps:
+    - try:
+        - apply:
+            resource:
+              apiVersion: v1
+              kind: ConfigMap
+              metadata:
+                name: callback-receiver
+              data:
+                nginx.conf: |
+                  events {}
+                  http {
+                    server {
+                      listen 80;
+                      location / { return 503; }
+                    }
+                  }
+        - apply:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: callback-receiver
+              spec:
+                replicas: 1
+                selector:
+                  matchLabels:
+                    app: callback-receiver
+                template:
+                  metadata:
+                    labels:
+                      app: callback-receiver
+                  spec:
+                    containers:
+                      - name: nginx
+                        image: nginx:alpine
+                        ports:
+                          - containerPort: 80
+                        volumeMounts:
+                          - name: conf
+                            mountPath: /etc/nginx/nginx.conf
+                            subPath: nginx.conf
+                    volumes:
+                      - name: conf
+                        configMap:
+                          name: callback-receiver
+        - apply:
+            resource:
+              apiVersion: v1
+              kind: Service
+              metadata:
+                name: callback-receiver
+              spec:
+                selector:
+                  app: callback-receiver
+                ports:
+                  - port: 80
+                    targetPort: 80
+        - wait:
+            apiVersion: apps/v1
+            kind: Deployment
+            name: callback-receiver
+            timeout: 60s
+            for:
+              condition:
+                name: Available
+                value: "true"
+    - try:
+        - apply:
+            resource:
+              apiVersion: cellbytes.io/v1
+              kind: JobTemplate
+              metadata:
+                name: callback-5xx-template
+              spec:
+                backoffLimit: 0
+                template:
+                  spec:
+                    containers:
+                      - name: busybox
+                        image: busybox
+                        command: ["sh", "-c", "exit 1"]
+                    restartPolicy: Never
+        - apply:
+            resource:
+              apiVersion: cellbytes.io/v1
+              kind: JobRun
+              metadata:
+                name: callback-5xx-jobrun
+              spec:
+                templateRef: callback-5xx-template
+                callbackUrl: (join('', ['http://callback-receiver.', $namespace, '.svc.cluster.local/cb']))
+                callbackToken: secret-token
+    # Wait deterministically for the Job to reach a terminal Failed condition, so
+    # the controller has certainly attempted (and will keep attempting) the
+    # callback.
+    - try:
+        - wait:
+            apiVersion: cellbytes.io/v1
+            kind: JobRun
+            name: callback-5xx-jobrun
+            timeout: 90s
+            for:
+              jsonPath:
+                path: .status.failed
+                value: "1"
+    # Give the controller a couple more ticks to (repeatedly) hit the 503.
+    - try:
+        - sleep:
+            duration: 15s
+    # The 503 receiver means the callback was never accepted, so the Job must NOT
+    # be marked sent.
+    - try:
+        - assert:
+            resource:
+              apiVersion: batch/v1
+              kind: Job
+              metadata:
+                labels:
+                  cellbytes.io/job-run: callback-5xx-jobrun
+              # Annotation must be absent or anything other than "true".
+              (metadata.annotations."cellbytes.io/callback-sent" || 'unset'): unset

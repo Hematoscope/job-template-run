@@ -31,4 +31,4 @@ pre_bump_hooks = [
 ]
 ignored_tag_formats = ["job-template-run-*"]
 
-changeup_repo_base_url = "https://github.com/hematoscope/job-template-run"
+changeup_repo_base_url = "https://github.com/cellbytes/job-template-run"

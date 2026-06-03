@@ -14,7 +14,7 @@ Managing Kubernetes `Job`s can become repetitive and error-prone when defining s
 To install the `job-template-run` Helm chart, use the following command:
 
 ```bash
-helm repo add cellbytes https://hematoscope.github.io/job-template-run
+helm repo add cellbytes https://cellbytes.github.io/job-template-run
 helm repo update
 helm install job-template-run cellbytes/job-template-run
 ```

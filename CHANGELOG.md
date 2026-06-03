@@ -1,3 +1,21 @@
+## 0.19.1 (2026-06-03)
+
+### Fix
+
+- point chart image repository to ghcr.io/cellbytes ([029a322](https://github.com/cellbytes/job-template-run/commit/029a322057fe47e90d9ffdb7abb5584e69c9aa67))
+
+  The chart default and Makefile still referenced the old ghcr.io/hematoscope
+
+  org after the move to cellbytes, so deployed pods pulled from the wrong (stale)
+
+  registry path. The release workflow already pushes to ghcr.io/<github.repository>
+
+  (cellbytes/job-template-run), so this aligns the chart default with the image
+
+  that CI actually publishes.
+
+  Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+
 ## 0.19.0 (2026-06-01)
 
 ### Feat

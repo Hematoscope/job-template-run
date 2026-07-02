@@ -1,3 +1,61 @@
+## 1.0.0 (2026-07-02)
+
+### BREAKING CHANGE
+
+- Jobs are named deterministically instead of using
+
+  generateName, deleting a JobRun now deletes its Job, and the controller
+
+  Deployment selector changed: delete the existing controller Deployment
+
+  before upgrading a pre-1.0 install. ([ec3b0e5](https://github.com/cellbytes/job-template-run/commit/ec3b0e5a7ecd0f261f1ebfb4f6f0e2a383f34d6c))
+
+### Feat
+
+- harden controller and chart for 1.0 ([ec3b0e5](https://github.com/cellbytes/job-template-run/commit/ec3b0e5a7ecd0f261f1ebfb4f6f0e2a383f34d6c))
+
+  - JobRuns are now one-shot: the Job gets a deterministic name
+
+  (<template>-<run>, digest-truncated to fit 63 chars), is recorded in
+
+  .status.jobName, and is never re-created after deletion or TTL
+
+  garbage collection.
+
+  - Created Jobs carry an owner reference to their JobRun, so deleting a
+
+  JobRun cascades to its Job and pods.
+
+  - Malformed JobTemplates and API-rejected Job specs fail the JobRun
+
+  permanently with .status.error instead of crash-looping the timer.
+
+  - Callback tokens can be read from a Secret via
+
+  spec.callbackTokenSecretRef (opt-in via rbac.allowCallbackTokenSecrets);
+
+  the payload now includes the namespace; 3xx responses are retried
+
+  instead of dropped.
+
+  - JobRun creation and Job status changes are handled by watch events with
+
+  the timers kept as reconcile backstops, and JobRun status is only
+
+  patched when something changed.
+
+  - JobRun CRD gains the status subresource and a Job printer column; both
+
+  CRDs are kept on helm uninstall; the controller deployment gets a
+
+  security context, resource requests, a readiness probe, and a
+
+  release-scoped selector.
+
+  - Release workflow only releases the commit the tests validated and
+
+  supports manual dispatch; the license changed to EUPL-1.2.
+
 ## 0.20.0 (2026-06-03)
 
 ### Feat

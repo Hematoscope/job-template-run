@@ -1,6 +1,6 @@
 [project]
 name = "job-template-run"
-version = "0.20.0"
+version = "1.0.0"
 description = "A Kubernetes controller for templated jobs and creating job runs"
 readme = "README.md"
 license = "EUPL-1.2"

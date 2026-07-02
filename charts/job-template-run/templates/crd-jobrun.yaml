@@ -2,12 +2,23 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   name: jobruns.cellbytes.io
+  labels:
+    app.kubernetes.io/name: {{ include "job-template-run.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/version: {{ .Chart.Version }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+  annotations:
+    # Keep the CRD (and with it all JobRun objects) when the release is
+    # uninstalled; deleting the CRD would cascade-delete every JobRun.
+    helm.sh/resource-policy: keep
 spec:
   group: cellbytes.io
   versions:
     - name: v1
       served: true
       storage: true
+      subresources:
+        status: {}
       schema:
         openAPIV3Schema:
           type: object
@@ -31,6 +42,16 @@ spec:
                   type: string
                 callbackToken:
                   type: string
+                callbackTokenSecretRef:
+                  type: object
+                  required:
+                    - name
+                    - key
+                  properties:
+                    name:
+                      type: string
+                    key:
+                      type: string
             status:
               type: object
               x-kubernetes-preserve-unknown-fields: true
@@ -39,6 +60,10 @@ spec:
           type: string
           jsonPath: .spec.templateRef
           description: The referenced JobTemplate
+        - name: Job
+          type: string
+          jsonPath: .status.jobName
+          description: The Job created for this run
         - name: Start Time
           type: string
           jsonPath: .status.startTime

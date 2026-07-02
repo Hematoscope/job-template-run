@@ -1,0 +1,135 @@
+# Test: the controller resolves spec.callbackTokenSecretRef at delivery time
+# and authenticates the callback with the token stored in the Secret.
+#
+# The nginx receiver answers 204 only when the Authorization header carries the
+# exact token from the Secret and 503 otherwise, so the callback-sent
+# annotation can only appear if the controller actually read the Secret.
+---
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: jobrun-callback-token-secret
+spec:
+  steps:
+    # Stand up the auth-checking callback receiver and the token Secret.
+    - try:
+        - apply:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: callback-token
+              stringData:
+                token: token-from-secret
+        - apply:
+            resource:
+              apiVersion: v1
+              kind: ConfigMap
+              metadata:
+                name: callback-receiver
+              data:
+                nginx.conf: |
+                  events {}
+                  http {
+                    server {
+                      listen 80;
+                      location / {
+                        if ($http_authorization = "Bearer token-from-secret") {
+                          return 204;
+                        }
+                        return 503;
+                      }
+                    }
+                  }
+        - apply:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: callback-receiver
+              spec:
+                replicas: 1
+                selector:
+                  matchLabels:
+                    app: callback-receiver
+                template:
+                  metadata:
+                    labels:
+                      app: callback-receiver
+                  spec:
+                    containers:
+                      - name: nginx
+                        image: nginx:alpine
+                        ports:
+                          - containerPort: 80
+                        volumeMounts:
+                          - name: conf
+                            mountPath: /etc/nginx/nginx.conf
+                            subPath: nginx.conf
+                    volumes:
+                      - name: conf
+                        configMap:
+                          name: callback-receiver
+        - apply:
+            resource:
+              apiVersion: v1
+              kind: Service
+              metadata:
+                name: callback-receiver
+              spec:
+                selector:
+                  app: callback-receiver
+                ports:
+                  - port: 80
+                    targetPort: 80
+        - wait:
+            apiVersion: apps/v1
+            kind: Deployment
+            name: callback-receiver
+            timeout: 60s
+            for:
+              condition:
+                name: Available
+                value: "true"
+    # Run a quick job whose callback token comes from the Secret.
+    - try:
+        - apply:
+            resource:
+              apiVersion: cellbytes.io/v1
+              kind: JobTemplate
+              metadata:
+                name: callback-secret-template
+              spec:
+                template:
+                  spec:
+                    containers:
+                      - name: busybox
+                        image: busybox
+                        command: ["sh", "-c", "echo done"]
+                    restartPolicy: Never
+        - apply:
+            resource:
+              apiVersion: cellbytes.io/v1
+              kind: JobRun
+              metadata:
+                name: callback-secret-jobrun
+              spec:
+                templateRef: callback-secret-template
+                # Receiver FQDN includes the per-test namespace chainsaw creates.
+                callbackUrl: (join('', ['http://callback-receiver.', $namespace, '.svc.cluster.local/cb']))
+                callbackTokenSecretRef:
+                  name: callback-token
+                  key: token
+    # The controller must read the Secret, deliver the callback with the right
+    # bearer token (the receiver 503s anything else), and mark the Job sent.
+    - try:
+        - assert:
+            timeout: 90s
+            resource:
+              apiVersion: batch/v1
+              kind: Job
+              metadata:
+                labels:
+                  cellbytes.io/job-run: callback-secret-jobrun
+                annotations:
+                  cellbytes.io/callback-sent: "true"

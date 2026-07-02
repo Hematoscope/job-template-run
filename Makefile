@@ -7,7 +7,7 @@ HELM_RELEASE=job-template-run
 DOCKER_IMAGE=ghcr.io/cellbytes/job-template-run
 
 
-.PHONY: kind kind-down helm-install helm-uninstall build test all clean dev-e2e
+.PHONY: kind kind-down lint helm-install helm-uninstall build test all clean dev-e2e
 
 kind:
 	kind create cluster --name $(KIND_CLUSTER_NAME)
@@ -23,8 +23,11 @@ lint:
 	helm lint $(HELM_CHART)
 
 helm-install:
-	kubectl create namespace $(NAMESPACE) || true
-	helm install $(HELM_RELEASE) $(HELM_CHART) -n $(NAMESPACE) --set image.tag=$$(git rev-parse --short HEAD) --set timerInterval=5.0
+	kubectl create namespace $(NAMESPACE) --dry-run=client -o yaml | kubectl apply -f -
+	helm install $(HELM_RELEASE) $(HELM_CHART) -n $(NAMESPACE) \
+		--set image.tag=$$(git rev-parse --short HEAD) \
+		--set timerInterval=5.0 \
+		--set rbac.allowCallbackTokenSecrets=true
 	kubectl wait --for=create pod -l app=job-template-run --timeout=30s -n $(NAMESPACE)
 	kubectl wait --for=condition=Ready pod -l app=job-template-run --timeout=30s -n $(NAMESPACE)
 
@@ -50,7 +53,9 @@ dev-e2e:
 	kind get kubeconfig --name $(KIND_CLUSTER_NAME) --internal > $(KUBECONFIG_INTERNAL)
 	KUBECONFIG=$(KUBECONFIG_INTERNAL) helm upgrade --install $(HELM_RELEASE) $(HELM_CHART) \
 		-n $(NAMESPACE) --create-namespace \
-		--set image.tag=$$(git rev-parse --short HEAD) --set timerInterval=5.0
+		--set image.tag=$$(git rev-parse --short HEAD) \
+		--set timerInterval=5.0 \
+		--set rbac.allowCallbackTokenSecrets=true
 	KUBECONFIG=$(KUBECONFIG_INTERNAL) kubectl rollout status \
 		deploy/$(HELM_RELEASE)-controller -n $(NAMESPACE) --timeout=90s
 	KUBECONFIG=$(KUBECONFIG_INTERNAL) TIMER_INTERVAL=15 uv run pytest tests/test_controller.py

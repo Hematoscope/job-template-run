@@ -18,12 +18,21 @@ rules:
   - apiGroups: ["apiextensions.k8s.io"]
     resources: ["customresourcedefinitions"]
     verbs: ["list", "watch"]
-
-
   - apiGroups: ["cellbytes.io"]
     resources: ["jobruns"]
-    verbs: ["list", "patch", "watch"]
+    verbs: ["get", "list", "patch", "watch"]
+  - apiGroups: ["cellbytes.io"]
+    resources: ["jobruns/status"]
+    verbs: ["get", "patch"]
   - apiGroups: ["cellbytes.io"]
     resources: ["jobtemplates"]
     verbs: ["get"]
+{{- if .Values.rbac.allowCallbackTokenSecrets }}
+  # Needed only for JobRuns that use spec.callbackTokenSecretRef: the
+  # controller reads the referenced Secret at callback-delivery time. This
+  # grants cluster-wide read access to Secrets, so it is opt-in.
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get"]
+{{- end }}
 {{- end }}

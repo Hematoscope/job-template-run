@@ -5,6 +5,7 @@ on:
     workflows: ["Run tests"]
     types: [completed]
     branches: [main]
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
@@ -26,6 +27,21 @@ jobs:
         with:
           fetch-depth: 0
 
+      # Guard against releasing a commit that was not the one the triggering
+      # test run validated: if main moved on since, skip and let the newer
+      # commit's own test run trigger the release.
+      - name: Verify HEAD is the tested commit
+        id: guard
+        run: |
+          TESTED_SHA="${{ github.event.workflow_run.head_sha }}"
+          if [[ "${{ github.event_name }}" == "workflow_run" \
+                && "$(git rev-parse HEAD)" != "$TESTED_SHA" ]]; then
+            echo "HEAD moved past tested commit ${TESTED_SHA}; skipping release."
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "proceed=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Configure Git
         run: |
           git config user.name "$GITHUB_ACTOR"
@@ -41,6 +57,7 @@ jobs:
 
       - name: Create bump and changelog
         id: cz
+        if: steps.guard.outputs.proceed == 'true'
         run: |
           PREVIOUS_VERSION="$(uv run cz version --project)"
           uv run cz --no-raise 7,21 bump --yes \
@@ -53,7 +70,7 @@ jobs:
 
           if [[ "$PREVIOUS_VERSION" != "$NEW_VERSION" ]]; then
             sed -i '/Running hook/d' charts/job-template-run/RELEASE_NOTES.md
-            git commit -am "bump: version ${PREVIOUS_VERSION} → ${NEW_VERSION}"
+            git commit -am "bump: version ${PREVIOUS_VERSION} -> ${NEW_VERSION}"
             git push
             echo "version-changed=true" >> "$GITHUB_OUTPUT"
             echo "version=${NEW_VERSION}" >> "$GITHUB_OUTPUT"

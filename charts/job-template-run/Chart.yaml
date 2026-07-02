@@ -3,3 +3,4 @@ name: job-template-run
 description: A Kubernetes controller for templated jobs and creating job runs
 type: application
 version: 0.20.0
+appVersion: "0.20.0"

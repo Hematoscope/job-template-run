@@ -12,6 +12,7 @@ spec:
   selector:
     matchLabels:
       app: {{ include "job-template-run.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
   template:
     metadata:
       labels:
@@ -22,10 +23,18 @@ spec:
         app.kubernetes.io/managed-by: {{ .Release.Service }}
     spec:
       serviceAccountName: {{ include "job-template-run.serviceAccountName" . }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
         - name: controller
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           command:
             - "kopf"
             - "run"
@@ -45,11 +54,23 @@ spec:
               value: {{ .Release.Service }}
             - name: TIMER_INTERVAL
               value: "{{ .Values.timerInterval }}"
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           livenessProbe:
             httpGet:
               path: /healthz
               port: 8080
             initialDelaySeconds: 15
             periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 3

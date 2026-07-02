@@ -12,6 +12,10 @@ serviceAccount:
 
 rbac:
   create: true
+  # Grant the controller cluster-wide read access to Secrets so JobRuns can use
+  # spec.callbackTokenSecretRef instead of a plaintext spec.callbackToken.
+  # Opt-in because secret read access is a broad permission.
+  allowCallbackTokenSecrets: false
 
 # NetworkPolicy for the controller. Required in clusters with a default-deny
 # policy, where the controller would otherwise be unable to reach DNS, the
@@ -24,5 +28,26 @@ networkPolicy:
   egressPorts:
     - 443
     - 8000
+
+# Container securityContext for the controller.
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+# Pod securityContext for the controller.
+podSecurityContext:
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+
+resources:
+  requests:
+    cpu: 20m
+    memory: 64Mi
+  limits:
+    memory: 256Mi
 
 timerInterval: 30.0

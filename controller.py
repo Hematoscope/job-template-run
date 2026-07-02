@@ -1,13 +1,23 @@
+import base64
+import copy
+import hashlib
 import logging
 import os
+from typing import NoReturn
+
 import httpx
 import kopf
-import yaml
 from kubernetes import client, config
 from kubernetes.client.exceptions import ApiException
 
 
 logger = logging.getLogger("kopf.controller")
+
+# Kubernetes label values are capped at 63 characters, and Job names must also
+# fit in 63 characters because the job controller copies the name into the
+# batch.kubernetes.io/job-name label on the pods it creates.
+LABEL_VALUE_MAX = 63
+JOB_NAME_MAX = 63
 
 
 @kopf.on.login()
@@ -34,6 +44,34 @@ def get_template(namespace, name):
     )
 
 
+def label_value(value):
+    return value[:LABEL_VALUE_MAX]
+
+
+def job_name_for(template_name, run_name):
+    # Deterministic Job name so that creation is idempotent: a concurrent or
+    # repeated reconcile gets a 409 instead of spawning a duplicate Job. Long
+    # names are truncated with a stable digest suffix to stay unique.
+    base = f"{template_name}-{run_name}"
+    if len(base) <= JOB_NAME_MAX:
+        return base
+    digest = hashlib.sha256(base.encode()).hexdigest()[:8]
+    return f"{base[: JOB_NAME_MAX - 9]}-{digest}"
+
+
+def build_labels(template_name, run_name):
+    env_labels = {
+        "app.kubernetes.io/name": os.getenv("APP_NAME"),
+        "app.kubernetes.io/instance": os.getenv("APP_INSTANCE"),
+        "app.kubernetes.io/version": os.getenv("APP_VERSION"),
+        "app.kubernetes.io/managed-by": os.getenv("APP_MANAGED_BY"),
+    }
+    labels = {key: value for key, value in env_labels.items() if value}
+    labels["cellbytes.io/job-template"] = label_value(template_name)
+    labels["cellbytes.io/job-run"] = label_value(run_name)
+    return labels
+
+
 def create_job(
     name,
     namespace,
@@ -42,48 +80,64 @@ def create_job(
     args=None,
     callback_url=None,
     callback_token=None,
+    callback_token_secret=None,
+    owner=None,
 ):
-    template = yaml.safe_load(yaml.dump(template))
-    job_spec = template["spec"]
+    template_name = template["metadata"]["name"]
+    job_spec = copy.deepcopy(template.get("spec"))
 
-    container = job_spec["template"]["spec"]["containers"][0]
+    try:
+        container = job_spec["template"]["spec"]["containers"][0]
+    except (KeyError, IndexError, TypeError):
+        raise ValueError(
+            f"JobTemplate '{template_name}' has no"
+            " .spec.template.spec.containers[0] to run"
+        )
     if command:
         container["command"] = command
     if args:
         container["args"] = args
 
-    labels = {
-        "app.kubernetes.io/name": os.getenv("APP_NAME"),
-        "app.kubernetes.io/instance": os.getenv("APP_INSTANCE"),
-        "app.kubernetes.io/version": os.getenv("APP_VERSION"),
-        "app.kubernetes.io/managed-by": os.getenv("APP_MANAGED_BY"),
-        "cellbytes.io/job-template": template["metadata"]["name"],
-        "cellbytes.io/job-run": name,
-    }
-
+    labels = build_labels(template_name, name)
     job_spec["template"].setdefault("metadata", {}).setdefault("labels", {}).update(
         labels
     )
 
-    annotations = {}
+    # The label value is truncated to 63 characters, so keep the full JobRun
+    # name in an annotation for the status-update path.
+    annotations = {"cellbytes.io/job-run-name": name}
     if callback_url:
         annotations["cellbytes.io/callback-url"] = callback_url
     if callback_token:
         annotations["cellbytes.io/callback-token"] = callback_token
+    if callback_token_secret:
+        annotations["cellbytes.io/callback-token-secret-name"] = callback_token_secret[
+            "name"
+        ]
+        annotations["cellbytes.io/callback-token-secret-key"] = callback_token_secret[
+            "key"
+        ]
 
+    job_name = job_name_for(template_name, name)
     job_manifest = {
         "apiVersion": "batch/v1",
         "kind": "Job",
         "metadata": {
-            "generateName": f"{template['metadata']['name']}-{name}-",
+            "name": job_name,
+            "namespace": namespace,
             "labels": labels,
             "annotations": annotations,
         },
         "spec": job_spec,
     }
+    if owner is not None:
+        # Owner reference to the JobRun: deleting the JobRun cascades to the
+        # Job (and its pods).
+        kopf.append_owner_reference(job_manifest, owner=owner)
     batch_v1 = client.BatchV1Api()
     # The client serializes a plain dict body; the stub only types V1Job.
     batch_v1.create_namespaced_job(namespace=namespace, body=job_manifest)  # pyright: ignore[reportArgumentType]
+    return job_name
 
 
 @kopf.on.startup()
@@ -107,43 +161,102 @@ def configure(settings, **_):
 INTERVAL = float(os.getenv("TIMER_INTERVAL", "30"))
 
 
-@kopf.timer("cellbytes.io", "v1", "jobruns", interval=INTERVAL)
-def jobrun_create_timer(spec, name, namespace, patch, status, **_):
-    api = client.BatchV1Api()
-    existing_jobs = api.list_namespaced_job(
-        namespace,
-        label_selector=f"cellbytes.io/job-run={name}",
-    )
+def _fail_permanently(patch, message) -> NoReturn:
+    patch.status["error"] = message
+    patch.status["failed"] = 1
+    raise kopf.PermanentError(message)
 
-    # Exit early if there are existing jobs or if the jobrun already succeeded or failed
-    if len(existing_jobs.items) > 0 or (
-        status and (status.get("succeeded") or status.get("failed"))
+
+# The on.create handler reacts immediately; the timer is the reconcile backstop
+# for events missed while the controller was down (or dropped by the watch).
+@kopf.on.create("cellbytes.io", "v1", "jobruns")
+@kopf.timer("cellbytes.io", "v1", "jobruns", interval=INTERVAL)
+def jobrun_reconcile(spec, name, namespace, patch, status, body, **_):
+    # One-shot semantics: once a Job has been recorded on the JobRun (or the
+    # JobRun reached a terminal state), never create another Job, even if the
+    # original Job has since been garbage-collected or deleted.
+    if status and (
+        status.get("jobName") or status.get("succeeded") or status.get("failed")
     ):
         return
 
-    template_name = spec.get("templateRef")
-    command = spec.get("command")
-    args = spec.get("args")
-    callback_url = spec.get("callbackUrl")
-    callback_token = spec.get("callbackToken")
+    # Fallback for JobRuns created before status.jobName existed: adopt an
+    # already-running labeled Job instead of creating a duplicate.
+    batch_api = client.BatchV1Api()
+    existing_jobs = batch_api.list_namespaced_job(
+        namespace,
+        label_selector=f"cellbytes.io/job-run={label_value(name)}",
+    )
+    if len(existing_jobs.items) > 0:
+        patch.status["jobName"] = existing_jobs.items[0].metadata.name
+        return
 
+    template_name = spec.get("templateRef")
     if not template_name:
-        patch.status["error"] = "templateRef must be specified"
-        patch.status["failed"] = 1
-        raise kopf.PermanentError("templateRef must be specified")
+        _fail_permanently(patch, "templateRef must be specified")
+
+    callback_token_secret = spec.get("callbackTokenSecretRef")
+    if callback_token_secret and not (
+        callback_token_secret.get("name") and callback_token_secret.get("key")
+    ):
+        _fail_permanently(
+            patch, "callbackTokenSecretRef must specify both name and key"
+        )
 
     try:
         template = get_template(namespace, template_name)
     except ApiException as e:
         if e.status == 404:
-            patch.status["error"] = f"JobTemplate '{template_name}' not found"
-            patch.status["failed"] = 1
-            raise kopf.PermanentError(f"JobTemplate '{template_name}' not found")
-        else:
-            raise
-    create_job(name, namespace, template, command, args, callback_url, callback_token)
+            _fail_permanently(patch, f"JobTemplate '{template_name}' not found")
+        raise
+
+    try:
+        job_name = create_job(
+            name,
+            namespace,
+            template,
+            command=spec.get("command"),
+            args=spec.get("args"),
+            callback_url=spec.get("callbackUrl"),
+            callback_token=spec.get("callbackToken"),
+            callback_token_secret=callback_token_secret,
+            owner=body,
+        )
+    except ValueError as e:
+        _fail_permanently(patch, str(e))
+    except ApiException as e:
+        if e.status == 409:
+            # Already created by a concurrent handler; deterministic naming
+            # makes this safe to record as ours.
+            patch.status["jobName"] = job_name_for(template_name, name)
+            return
+        if e.status == 422:
+            _fail_permanently(
+                patch, f"Job creation rejected by the API server: {e.reason}"
+            )
+        raise
+    patch.status["jobName"] = job_name
 
 
+def resolve_callback_token(annotations, namespace):
+    token = annotations.get("cellbytes.io/callback-token")
+    if token:
+        return token
+    secret_name = annotations.get("cellbytes.io/callback-token-secret-name")
+    secret_key = annotations.get("cellbytes.io/callback-token-secret-key")
+    if not secret_name or not secret_key:
+        return None
+    core_api = client.CoreV1Api()
+    secret = core_api.read_namespaced_secret(secret_name, namespace)
+    data = secret.data or {}
+    if secret_key not in data:
+        raise ValueError(f"key '{secret_key}' not found in secret '{secret_name}'")
+    return base64.b64decode(data[secret_key]).decode()
+
+
+# The on.event handler reacts to Job status changes as they happen; the timer
+# is the reconcile backstop (missed events, callback retries after a 5xx).
+@kopf.on.event("batch", "v1", "jobs", labels={"cellbytes.io/job-run": kopf.PRESENT})
 @kopf.timer(
     "batch",
     "v1",
@@ -151,32 +264,58 @@ def jobrun_create_timer(spec, name, namespace, patch, status, **_):
     interval=INTERVAL,
     labels={"cellbytes.io/job-run": kopf.PRESENT},
 )
-def job_status_update_timer(spec, name, namespace, status, meta, **_):
-    jobrun_name = meta.get("labels", {}).get("cellbytes.io/job-run")
-    jobrun_namespace = meta.get("namespace")
-    if not jobrun_name or not jobrun_namespace:
+def job_status_update(name, namespace, status, meta, event=None, **_):
+    if event and event.get("type") == "DELETED":
         return
 
-    status_update = {
+    annotations = meta.get("annotations") or {}
+    jobrun_name = annotations.get("cellbytes.io/job-run-name") or meta.get(
+        "labels", {}
+    ).get("cellbytes.io/job-run")
+    if not jobrun_name or not namespace:
+        return
+
+    crd_api = client.CustomObjectsApi()
+    try:
+        jobrun = crd_api.get_namespaced_custom_object(
+            group="cellbytes.io",
+            version="v1",
+            namespace=namespace,
+            plural="jobruns",
+            name=jobrun_name,
+        )
+    except ApiException as e:
+        if e.status == 404:
+            # The JobRun is gone; nothing to update or notify.
+            return
+        raise
+
+    desired_status = {
         "startTime": status.get("startTime"),
         "completionTime": status.get("completionTime"),
-        "conditions": status.get("conditions", []),
+        "conditions": status.get("conditions"),
         "active": status.get("active"),
         "succeeded": status.get("succeeded"),
         "failed": status.get("failed"),
     }
-    crd_api = client.CustomObjectsApi()
-    try:
-        crd_api.patch_namespaced_custom_object(
-            group="cellbytes.io",
-            version="v1",
-            namespace=jobrun_namespace,
-            plural="jobruns",
-            name=jobrun_name,
-            body={"status": status_update},
-        )
-    except ApiException as e:
-        logger.warning(f"Failed to update JobRun status: {e}")
+    current_status = jobrun.get("status") or {}
+    changed = {
+        key: value
+        for key, value in desired_status.items()
+        if current_status.get(key) != value
+    }
+    if changed:
+        try:
+            crd_api.patch_namespaced_custom_object_status(
+                group="cellbytes.io",
+                version="v1",
+                namespace=namespace,
+                plural="jobruns",
+                name=jobrun_name,
+                body={"status": changed},
+            )
+        except ApiException as e:
+            logger.warning(f"Failed to update JobRun status: {e}")
 
     conditions = status.get("conditions") or []
     is_failed = any(
@@ -185,45 +324,57 @@ def job_status_update_timer(spec, name, namespace, status, meta, **_):
     is_complete = any(
         c.get("type") == "Complete" and c.get("status") == "True" for c in conditions
     )
-    callback_url = (meta.get("annotations") or {}).get("cellbytes.io/callback-url")
-    callback_token = (meta.get("annotations") or {}).get("cellbytes.io/callback-token")
-    callback_sent = (meta.get("annotations") or {}).get(
-        "cellbytes.io/callback-sent"
-    ) == "true"
+    callback_url = annotations.get("cellbytes.io/callback-url")
+    callback_sent = annotations.get("cellbytes.io/callback-sent") == "true"
 
     terminal_status = "Complete" if is_complete else "Failed" if is_failed else None
 
-    if callback_url and terminal_status and not callback_sent:
-        headers = {}
-        if callback_token:
-            headers["Authorization"] = f"Bearer {callback_token}"
-        delivered = False
-        try:
-            response = httpx.post(
-                callback_url,
-                json={"name": jobrun_name, "status": terminal_status},
-                headers=headers,
-                timeout=10,
-            )
-            # 2xx means accepted; 4xx means our request is malformed/unauthorized
-            # and retrying will not help, so both count as delivered. A 5xx is a
-            # transient server-side error worth retrying.
-            delivered = response.status_code < 500
-            if not delivered:
-                logger.warning(
-                    f"Callback to {callback_url} returned {response.status_code}, "
-                    "will retry on next tick"
-                )
-        except Exception as e:
-            # Network-level failure (app rolling out, DNS blip, timeout). Leave the
-            # callback unsent so the next timer tick retries it.
-            logger.warning(f"Failed to send callback to {callback_url}: {e}")
+    if not callback_url or not terminal_status or callback_sent:
+        return
 
-        # Only mark sent once the callback was actually delivered. Retries are
-        # naturally bounded by the job's ttlSecondsAfterFinished: once the job is
-        # garbage-collected the timer stops firing for it.
-        if delivered:
-            batch_api = client.BatchV1Api()
+    try:
+        callback_token = resolve_callback_token(annotations, namespace)
+    except Exception as e:
+        # The referenced Secret is missing or malformed. Leave the callback
+        # unsent so a later tick retries once the Secret is fixed.
+        logger.warning(f"Cannot resolve callback token for job {name}: {e}")
+        return
+
+    headers = {}
+    if callback_token:
+        headers["Authorization"] = f"Bearer {callback_token}"
+    delivered = False
+    try:
+        response = httpx.post(
+            callback_url,
+            json={
+                "name": jobrun_name,
+                "namespace": namespace,
+                "status": terminal_status,
+            },
+            headers=headers,
+            timeout=10,
+        )
+        # 2xx means accepted; 4xx means our request is malformed/unauthorized
+        # and retrying will not help, so both count as delivered. Redirects are
+        # not followed, so 3xx (like 5xx) is worth retrying.
+        delivered = response.is_success or response.is_client_error
+        if not delivered:
+            logger.warning(
+                f"Callback to {callback_url} returned {response.status_code}, "
+                "will retry on next tick"
+            )
+    except Exception as e:
+        # Network-level failure (app rolling out, DNS blip, timeout). Leave the
+        # callback unsent so the next timer tick retries it.
+        logger.warning(f"Failed to send callback to {callback_url}: {e}")
+
+    # Only mark sent once the callback was actually delivered. Retries are
+    # naturally bounded by the job's ttlSecondsAfterFinished: once the job is
+    # garbage-collected the timer stops firing for it.
+    if delivered:
+        batch_api = client.BatchV1Api()
+        try:
             batch_api.patch_namespaced_job(
                 name=name,
                 namespace=namespace,
@@ -231,3 +382,6 @@ def job_status_update_timer(spec, name, namespace, status, meta, **_):
                     "metadata": {"annotations": {"cellbytes.io/callback-sent": "true"}}
                 },
             )
+        except ApiException as e:
+            if e.status != 404:
+                raise

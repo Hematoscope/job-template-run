@@ -1,3 +1,19 @@
+## 1.1.0 (2026-09-03)
+
+### Feat
+
+- forward the terminal Job condition in the callback ([f54f81e](https://github.com/cellbytes/job-template-run/commit/f54f81e46be8e99e0ca8feb8a48b22d1cd9f819e))
+
+  The callback said only "Complete" or "Failed", so a receiver could not tell
+
+  a backoff limit from a deadline from a pod failure policy without holding
+
+  Job read access of its own. Send the condition's own reason and message
+
+  alongside the status, omitting either key the condition left empty.
+
+  Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+
 ## 1.0.0 (2026-07-02)
 
 ### BREAKING CHANGE

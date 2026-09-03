@@ -335,8 +335,13 @@ def _make_complete_conditions():
     return [{"type": "Complete", "status": "True"}]
 
 
-def _make_failed_conditions():
-    return [{"type": "Failed", "status": "True"}]
+def _make_failed_conditions(reason=None, message=None):
+    condition = {"type": "Failed", "status": "True"}
+    if reason is not None:
+        condition["reason"] = reason
+    if message is not None:
+        condition["message"] = message
+    return [condition]
 
 
 def _call_status_update(
@@ -507,6 +512,75 @@ def test_callback_fired_on_failed_without_token():
             timeout=10,
         )
         mock_patch_job.assert_called_once()
+
+
+def test_callback_forwards_condition_reason_and_message():
+    with (
+        mock.patch("controller.client.CustomObjectsApi") as mock_crd,
+        mock.patch("controller.client.BatchV1Api"),
+        mock.patch("controller.httpx.post", return_value=_ok_response()) as mock_post,
+    ):
+        _mock_jobrun_get(mock_crd)
+
+        _call_status_update(
+            conditions=_make_failed_conditions(
+                reason="BackoffLimitExceeded",
+                message="Job has reached the specified backoff limit",
+            ),
+            callback_url="https://example.com/cb",
+        )
+
+        assert mock_post.call_args.kwargs["json"] == {
+            "name": "my-run",
+            "namespace": "default",
+            "status": "Failed",
+            "reason": "BackoffLimitExceeded",
+            "message": "Job has reached the specified backoff limit",
+        }
+
+
+def test_callback_omits_empty_condition_reason():
+    """A condition carrying no reason sends no key, rather than an empty one."""
+    with (
+        mock.patch("controller.client.CustomObjectsApi") as mock_crd,
+        mock.patch("controller.client.BatchV1Api"),
+        mock.patch("controller.httpx.post", return_value=_ok_response()) as mock_post,
+    ):
+        _mock_jobrun_get(mock_crd)
+
+        _call_status_update(
+            conditions=_make_failed_conditions(reason="", message="only a message"),
+            callback_url="https://example.com/cb",
+        )
+
+        assert mock_post.call_args.kwargs["json"] == {
+            "name": "my-run",
+            "namespace": "default",
+            "status": "Failed",
+            "message": "only a message",
+        }
+
+
+def test_callback_prefers_complete_over_failed():
+    """A Job carrying both terminal conditions reports the successful one."""
+    with (
+        mock.patch("controller.client.CustomObjectsApi") as mock_crd,
+        mock.patch("controller.client.BatchV1Api"),
+        mock.patch("controller.httpx.post", return_value=_ok_response()) as mock_post,
+    ):
+        _mock_jobrun_get(mock_crd)
+
+        _call_status_update(
+            conditions=_make_failed_conditions(reason="BackoffLimitExceeded")
+            + _make_complete_conditions(),
+            callback_url="https://example.com/cb",
+        )
+
+        assert mock_post.call_args.kwargs["json"] == {
+            "name": "my-run",
+            "namespace": "default",
+            "status": "Complete",
+        }
 
 
 def test_callback_uses_token_from_secret():

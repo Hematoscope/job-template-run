@@ -254,6 +254,37 @@ def resolve_callback_token(annotations, namespace):
     return base64.b64decode(data[secret_key]).decode()
 
 
+def terminal_job_condition(conditions):
+    """Returns the Job condition that ended it, or None while it is still going.
+
+    "Complete" outranks "Failed" for a Job that somehow carries both, matching
+    the resolution kubectl shows.
+    """
+    by_type = {
+        c.get("type"): c
+        for c in conditions
+        if c.get("status") == "True" and c.get("type") in ("Complete", "Failed")
+    }
+    return by_type.get("Complete") or by_type.get("Failed")
+
+
+def callback_payload(jobrun_name, namespace, condition):
+    """Builds the callback body describing how a Job ended.
+
+    `reason` and `message` are the Job condition's own, forwarded verbatim so a
+    receiver can tell a backoff limit from a deadline from a pod failure policy
+    without holding Job read access itself. Kubernetes leaves either of them
+    empty on some conditions, and an absent key says so rather than sending a
+    null a receiver would have to special-case.
+    """
+    payload = {"name": jobrun_name, "namespace": namespace, "status": condition["type"]}
+    for key in ("reason", "message"):
+        value = condition.get(key)
+        if value:
+            payload[key] = value
+    return payload
+
+
 # The on.event handler reacts to Job status changes as they happen; the timer
 # is the reconcile backstop (missed events, callback retries after a 5xx).
 @kopf.on.event("batch", "v1", "jobs", labels={"cellbytes.io/job-run": kopf.PRESENT})
@@ -317,19 +348,11 @@ def job_status_update(name, namespace, status, meta, event=None, **_):
         except ApiException as e:
             logger.warning(f"Failed to update JobRun status: {e}")
 
-    conditions = status.get("conditions") or []
-    is_failed = any(
-        c.get("type") == "Failed" and c.get("status") == "True" for c in conditions
-    )
-    is_complete = any(
-        c.get("type") == "Complete" and c.get("status") == "True" for c in conditions
-    )
+    terminal_condition = terminal_job_condition(status.get("conditions") or [])
     callback_url = annotations.get("cellbytes.io/callback-url")
     callback_sent = annotations.get("cellbytes.io/callback-sent") == "true"
 
-    terminal_status = "Complete" if is_complete else "Failed" if is_failed else None
-
-    if not callback_url or not terminal_status or callback_sent:
+    if not callback_url or not terminal_condition or callback_sent:
         return
 
     try:
@@ -347,11 +370,7 @@ def job_status_update(name, namespace, status, meta, event=None, **_):
     try:
         response = httpx.post(
             callback_url,
-            json={
-                "name": jobrun_name,
-                "namespace": namespace,
-                "status": terminal_status,
-            },
+            json=callback_payload(jobrun_name, namespace, terminal_condition),
             headers=headers,
             timeout=10,
         )

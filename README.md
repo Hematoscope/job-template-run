@@ -118,6 +118,8 @@ spec:
 
 The controller POSTs `{"name": <jobrun name>, "namespace": <namespace>, "status": "Complete" | "Failed"}` to `callbackUrl`, with an `Authorization: Bearer <token>` header when a token is configured.
 
+The `reason` and `message` of the `Job` condition that ended the run are added to that body whenever Kubernetes set them, so a receiver can tell `BackoffLimitExceeded` from `DeadlineExceeded` from `PodFailurePolicy` without read access to the `Job` itself. Either key is absent when the condition carries no such text.
+
 The token can be given either inline as `callbackToken` (visible to anyone who can read the `JobRun` or the `Job`, since it is copied to a Job annotation) or, preferably, as `callbackTokenSecretRef` referencing a `Secret` in the same namespace. The secret is read at delivery time and never leaves the controller; reading secrets requires installing the chart with `rbac.allowCallbackTokenSecrets=true`.
 
 Delivery is at-least-once: a 2xx or 4xx response marks the callback as sent (a 4xx will not improve on retry), while 3xx/5xx responses and network errors are retried on the next reconcile tick. Retries stop once the `Job` is garbage-collected (`ttlSecondsAfterFinished`), so receivers should tolerate duplicate notifications and set a TTL in their templates to bound retries.
